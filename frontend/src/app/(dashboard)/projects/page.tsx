@@ -94,6 +94,14 @@ export default function ProjectsPage() {
     onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["delete-requests"] }); },
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: (id: number) => projects.remove(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
+    },
+  });
+
   const formatAmt = fmtMoney;
 
   // 컬럼 수: [프로젝트코드] + 프로젝트명+발주처+계약금액+계약일+착공일+준공일+상태(7) + [액션]
@@ -141,7 +149,7 @@ export default function ProjectsPage() {
                 <th>착공일</th>
                 <th>준공일</th>
                 <th>상태</th>
-                {canEdit && <th className="text-center">액션</th>}
+                {canEdit && <th className="text-center">비고</th>}
               </tr>
             </thead>
             <tbody>
@@ -167,47 +175,71 @@ export default function ProjectsPage() {
                     <td style={{ color: "#888" }}>{p.endDate ? new Date(p.endDate).toLocaleDateString("ko-KR") : "-"}</td>
                     <td><span className={`ct-badge ${STATUS_COLORS[p.status] || "ct-badge-gray"}`}>{STATUS_LABELS[p.status]}</span></td>
                     {canEdit && (
-                      <td className="text-center">
-                        <div className="flex items-center justify-center gap-1">
-                          {/* 변경 버튼 */}
-                          <button onClick={() => { setChangeTarget(p); setChangeForm(EMPTY_CHANGE); }}
-                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                            style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}>
-                            <GitBranch size={11} />변경
-                          </button>
+                      <td className="text-center" style={{ verticalAlign: "middle" }}>
+                        <div className="flex flex-col items-center gap-1.5">
 
-                          {/* PM: 삭제요청 버튼 */}
-                          {isPm && !pendingReq && (
-                            <button onClick={() => { setDeleteTarget(p); setDeleteForm(EMPTY_DELETE); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                              style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
-                              <Trash2 size={11} />삭제
-                            </button>
+                          {/* Admin: 요청확인란 */}
+                          {isAdmin && pendingReq && (
+                            <div className="rounded-lg px-2 py-2 text-left w-full"
+                              style={{ background: "#FFF0F0", border: "1px solid #FFCCCC", minWidth: 130 }}>
+                              <div className="text-xs font-semibold mb-1" style={{ color: "#FC5356" }}>
+                                ⚠ 삭제 요청
+                              </div>
+                              {pendingReq.reason && (
+                                <p className="text-xs mb-2" style={{ color: "#666", wordBreak: "break-word" }}>
+                                  {pendingReq.reason}
+                                </p>
+                              )}
+                              <div className="flex gap-1">
+                                <button onClick={() => approveMutation.mutate(pendingReq.id)}
+                                  disabled={approveMutation.isPending}
+                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium"
+                                  style={{ background: "#F0FFF4", color: "#27AE60", border: "1px solid #A8E6BE" }}>
+                                  <Check size={10} />승인
+                                </button>
+                                <button onClick={() => rejectMutation.mutate(pendingReq.id)}
+                                  disabled={rejectMutation.isPending}
+                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium"
+                                  style={{ background: "#FFF8F8", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                                  <X size={10} />거절
+                                </button>
+                              </div>
+                            </div>
                           )}
+
+                          {/* PM: 삭제 대기 중 표시 */}
                           {isPm && pendingReq && (
-                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
+                            <span className="text-xs px-2 py-0.5 rounded-full"
                               style={{ background: "#FFF3E0", color: "#E67E22", border: "1px solid #FFD9A0" }}>
-                              삭제 대기
+                              ⏳ 삭제 대기중
                             </span>
                           )}
 
-                          {/* Admin: 승인/거절 버튼 */}
-                          {isAdmin && pendingReq && (
-                            <>
-                              <button onClick={() => approveMutation.mutate(pendingReq.id)}
-                                disabled={approveMutation.isPending}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                                style={{ background: "#F0FFF4", color: "#27AE60", border: "1px solid #A8E6BE" }}>
-                                <Check size={11} />승인
-                              </button>
-                              <button onClick={() => rejectMutation.mutate(pendingReq.id)}
-                                disabled={rejectMutation.isPending}
+                          {/* 버튼 그룹: 변경 + 삭제(admin) / 삭제요청(pm) */}
+                          <div className="flex items-center justify-center gap-1">
+                            <button onClick={() => { setChangeTarget(p); setChangeForm(EMPTY_CHANGE); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                              style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}>
+                              <GitBranch size={11} />변경
+                            </button>
+                            {isAdmin && (
+                              <button
+                                onClick={() => { if (confirm(`"${p.name}" 을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(p.id); }}
+                                disabled={deleteMutation.isPending}
                                 className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
                                 style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
-                                <X size={11} />거절
+                                <Trash2 size={11} />삭제
                               </button>
-                            </>
-                          )}
+                            )}
+                            {isPm && !pendingReq && (
+                              <button onClick={() => { setDeleteTarget(p); setDeleteForm(EMPTY_DELETE); }}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                                <Trash2 size={11} />삭제요청
+                              </button>
+                            )}
+                          </div>
+
                         </div>
                       </td>
                     )}

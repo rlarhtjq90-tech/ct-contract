@@ -13,7 +13,27 @@ export class BillingsService {
     private eventEmitter: EventEmitter2,
   ) {}
 
-  findByMonth(month: string) {
+  async findByMonth(month: string) {
+    // 해당 월 데이터가 없는 하도급계약에 대해 자동 생성
+    const subcontracts = await this.subRepo.find({
+      relations: { subcontractor: true, project: true },
+    });
+
+    for (const sub of subcontracts) {
+      const exists = await this.repo.findOne({
+        where: { subcontractId: sub.id, billingMonth: month },
+      });
+      if (!exists) {
+        await this.repo.save(
+          this.repo.create({
+            subcontractId: sub.id,
+            billingMonth: month,
+            status: BillingStatus.PENDING,
+          }),
+        );
+      }
+    }
+
     return this.repo.find({
       where: { billingMonth: month },
       relations: { subcontract: { subcontractor: true, project: true } },

@@ -4,6 +4,17 @@
 #coding 태그 항목은 SessionStart 시 자동 주입됩니다.
 반복 패턴은 /wrap HITL 승급을 통해 적절한 vehicle로 적용됩니다.
 
+## NestJS
+
+### ValidationPipe forbidNonWhitelisted 사용 시 DTO 데코레이터 필수 #coding #nestjs
+`ValidationPipe({ whitelist: true, forbidNonWhitelisted: true })`를 설정하면
+DTO 클래스의 **모든** 필드에 `@IsString()`, `@IsNumber()` 등 class-validator 데코레이터가 있어야 한다.
+데코레이터가 없으면 "property X should not exist" 400 에러로 전체 요청이 거부된다.
+
+### dist 업데이트 후 수동 재시작 확인 필수 #coding #nestjs
+`nest start --watch`가 실행 중이어도 포트에 실제로 바인딩된 PID가 새 dist를 사용하는지 보장되지 않는다.
+파일 수정 후 `Get-NetTCPConnection -LocalPort 4000` → PID 확인 → `Stop-Process` 후 재시작 패턴이 확실함.
+
 ## API 설계
 
 ### service/controller/client 3곳 동시 업데이트 #coding #api

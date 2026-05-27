@@ -1,14 +1,25 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { IsString, IsNumber, IsOptional } from 'class-validator';
+import { Type } from 'class-transformer';
 import { DeleteRequest, DeleteRequestStatus } from '../entities/delete-request.entity';
 import { Project } from '../entities/project.entity';
 import { Subcontract } from '../entities/subcontract.entity';
 
 export class CreateDeleteRequestDto {
+  @IsString()
   targetType: string;
+
+  @IsNumber()
+  @Type(() => Number)
   targetId: number;
+
+  @IsString()
   targetName: string;
+
+  @IsOptional()
+  @IsString()
   reason?: string;
 }
 

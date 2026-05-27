@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Param, Body, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
 import { ProjectsService, CreateProjectDto, AddChangeDto } from './projects.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -34,4 +34,7 @@ export class ProjectsController {
   getChanges(@Param('id', ParseIntPipe) id: number) {
     return this.service.getChanges(id);
   }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) { return this.service.remove(id); }
 }

@@ -18,8 +18,9 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 export default function ProjectBillingsPage() {
   const queryClient = useQueryClient();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [edits, setEdits] = useState<Record<number, { plannedAmount?: number; actualAmount?: number }>>({});
+  const [edits, setEdits] = useState<Record<number, { actualAmount?: number }>>({});
   const [saving, setSaving] = useState(false);
+  const [focusedId, setFocusedId] = useState<number | null>(null);
 
   const { data: billingList = [], isLoading } = useQuery({
     queryKey: ["project-billings", month],
@@ -122,8 +123,7 @@ export default function ProjectBillingsPage() {
                   <th style={{ minWidth: "120px" }}>발주처</th>
                   <th style={{ minWidth: "160px" }}>도급계약명</th>
                   <th className="text-right" style={{ minWidth: "110px" }}>계약금액</th>
-                  <th className="text-right" style={{ minWidth: "110px" }}>당월 계획액</th>
-                  <th className="text-right" style={{ minWidth: "110px" }}>당월 실적액</th>
+                  <th className="text-right" style={{ minWidth: "110px" }}>기성금액</th>
                   <th className="text-right" style={{ minWidth: "100px" }}>누적액</th>
                   <th style={{ minWidth: "110px" }}>기성률</th>
                   <th style={{ minWidth: "80px" }}>상태</th>
@@ -133,13 +133,13 @@ export default function ProjectBillingsPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-10" style={{ color: "#AAA" }}>
+                    <td colSpan={8} className="text-center py-10" style={{ color: "#AAA" }}>
                       불러오는 중...
                     </td>
                   </tr>
                 ) : (billingList as any[]).length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12">
+                    <td colSpan={8} className="text-center py-12">
                       <div style={{ color: "#AAA", fontSize: 13 }}>
                         {month} 도급 기성 데이터가 없습니다.
                         <br />도급계약을 먼저 등록하세요.
@@ -150,7 +150,6 @@ export default function ProjectBillingsPage() {
                   (billingList as any[]).map((b: any) => {
                     const edit = edits[b.id] || {};
                     const actualVal = edit.actualAmount ?? Number(b.actualAmount);
-                    const plannedVal = edit.plannedAmount ?? Number(b.plannedAmount);
                     const isEdited = b.id in edits;
                     const contractAmt = Number(b.project?.currentAmount || 0);
 
@@ -182,42 +181,27 @@ export default function ProjectBillingsPage() {
                         </td>
                         <td className="text-right">
                           {b.status === "approved" ? (
-                            <span className="text-sm" style={{ color: "#333" }}>
-                              {fmtNum(plannedVal)}
-                            </span>
-                          ) : (
-                            <input
-                              type="number"
-                              value={plannedVal || ""}
-                              onChange={(e) =>
-                                setEdits((prev) => ({
-                                  ...prev,
-                                  [b.id]: { ...prev[b.id], plannedAmount: parseInt(e.target.value) || 0 },
-                                }))
-                              }
-                              className="w-full text-right px-2 py-1 rounded text-sm outline-none"
-                              style={{
-                                border: `1px solid ${isEdited ? "#1C90FB" : "#E6E6E6"}`,
-                                color: "#333",
-                              }}
-                            />
-                          )}
-                        </td>
-                        <td className="text-right">
-                          {b.status === "approved" ? (
                             <span className="text-sm font-medium" style={{ color: "#333" }}>
                               {fmtNum(actualVal)}
                             </span>
                           ) : (
                             <input
-                              type="number"
-                              value={actualVal || ""}
-                              onChange={(e) =>
+                              type="text"
+                              inputMode="numeric"
+                              value={
+                                focusedId === b.id
+                                  ? (actualVal || "")
+                                  : (actualVal ? fmtNum(actualVal) : "")
+                              }
+                              onFocus={(e) => { setFocusedId(b.id); e.target.select(); }}
+                              onBlur={() => setFocusedId(null)}
+                              onChange={(e) => {
+                                const raw = parseInt(e.target.value.replace(/,/g, "")) || 0;
                                 setEdits((prev) => ({
                                   ...prev,
-                                  [b.id]: { ...prev[b.id], actualAmount: parseInt(e.target.value) || 0 },
-                                }))
-                              }
+                                  [b.id]: { ...prev[b.id], actualAmount: raw },
+                                }));
+                              }}
                               className="w-full text-right px-2 py-1 rounded text-sm outline-none"
                               style={{
                                 border: `1px solid ${isEdited ? "#1C90FB" : "#E6E6E6"}`,

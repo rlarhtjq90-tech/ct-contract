@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Param, Body, Query, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, Query, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
 import { SubcontractsService, CreateSubcontractDto } from './subcontracts.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -29,4 +29,7 @@ export class SubcontractsController {
 
   @Get(':id/changes')
   getChanges(@Param('id', ParseIntPipe) id: number) { return this.service.getChanges(id); }
+
+  @Delete(':id')
+  remove(@Param('id', ParseIntPipe) id: number) { return this.service.remove(id); }
 }

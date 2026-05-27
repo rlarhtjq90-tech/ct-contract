@@ -71,6 +71,7 @@ export const projects = {
   addChange: (id: number, data: any) =>
     fetchApi<any>(`/projects/${id}/changes`, { method: "POST", body: JSON.stringify(data) }),
   getChanges: (id: number) => fetchApi<any[]>(`/projects/${id}/changes`),
+  remove: (id: number) => fetchApi<any>(`/projects/${id}`, { method: "DELETE" }),
 };
 
 // ===== Subcontractors (하도급사) =====
@@ -91,6 +92,7 @@ export const subcontracts = {
   addChange: (id: number, data: { deltaAmount: number; reason: string; effectiveDate?: string }) =>
     fetchApi<any>(`/subcontracts/${id}/changes`, { method: "POST", body: JSON.stringify(data) }),
   getChanges: (id: number) => fetchApi<any[]>(`/subcontracts/${id}/changes`),
+  remove: (id: number) => fetchApi<any>(`/subcontracts/${id}`, { method: "DELETE" }),
 };
 
 // ===== Billings (기성) =====

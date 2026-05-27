@@ -93,4 +93,9 @@ export class ProjectsService {
       order: { changeNo: 'ASC' },
     });
   }
+
+  async remove(id: number) {
+    await this.repo.delete(id);
+    return { success: true };
+  }
 }
