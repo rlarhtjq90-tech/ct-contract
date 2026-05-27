@@ -2,13 +2,15 @@
 
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { clients } from "@/lib/api";
+import { subcontractors } from "@/lib/api";
 import { PageHeader } from "@/components/layout/page-header";
+import { useCanEdit } from "@/lib/auth";
 import { Plus, Search, Building2, CheckCircle2, XCircle, AlertCircle } from "lucide-react";
 
 const EMPTY_FORM = {
   name: "",
   businessNo: "",
+  workType: "",
   ceoName: "",
   contactName: "",
   contactPhone: "",
@@ -17,31 +19,32 @@ const EMPTY_FORM = {
 
 type BizCheck = "idle" | "ok" | "duplicate";
 
-export default function ClientsPage() {
+export default function SubcontractorsPage() {
   const queryClient = useQueryClient();
+  const canEdit = useCanEdit();
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [bizCheck, setBizCheck] = useState<BizCheck>("idle");
 
   const { data = [], isLoading } = useQuery({
-    queryKey: ["clients"],
-    queryFn: clients.getAll,
+    queryKey: ["subcontractors"],
+    queryFn: subcontractors.getAll,
   });
 
   const createMutation = useMutation({
     mutationFn: (f: typeof EMPTY_FORM) =>
-      clients.create({
+      subcontractors.create({
         name: f.name,
         businessNo: f.businessNo || undefined,
-        ceoName: f.ceoName || undefined,
+        workType: f.workType || undefined,
         contactInfo: (f.contactName || f.contactPhone)
           ? { name: f.contactName, phone: f.contactPhone }
           : undefined,
         memo: f.memo || undefined,
       }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["subcontractors"] });
       setShowModal(false);
       setForm(EMPTY_FORM);
       setBizCheck("idle");
@@ -54,50 +57,49 @@ export default function ClientsPage() {
     setBizCheck("idle");
   };
 
-  // 사업자번호 중복확인
   const handleBizCheck = () => {
     const trimmed = form.businessNo.trim();
     if (!trimmed) return;
     const exists = (data as any[]).some(
-      (c) => (c.businessNo || "").replace(/-/g, "") === trimmed.replace(/-/g, "")
+      (s) => (s.businessNo || "").replace(/-/g, "") === trimmed.replace(/-/g, "")
     );
     setBizCheck(exists ? "duplicate" : "ok");
   };
 
-  // 사업자번호 자릿수 상태
   const bizDigits = form.businessNo.replace(/-/g, "").length;
-  const bizComplete = bizDigits === 10;   // 10자리 완성
-  const bizPartial  = bizDigits > 0 && bizDigits < 10;  // 입력 중 (미완성)
+  const bizComplete = bizDigits === 10;
+  const bizPartial = bizDigits > 0 && bizDigits < 10;
 
-  // 저장 버튼 활성 조건 — 사업자번호 10자리 완성 + 중복확인 통과 필수
   const canSave =
     !!form.name &&
     !createMutation.isPending &&
     bizComplete &&
     bizCheck === "ok";
 
-  const filtered = data.filter(
-    (c: any) =>
-      c.name.includes(search) ||
-      (c.businessNo || "").includes(search) ||
-      (c.ceoName || "").includes(search) ||
-      (c.contactInfo?.name || "").includes(search)
+  const filtered = (data as any[]).filter(
+    (s) =>
+      s.name.includes(search) ||
+      (s.businessNo || "").includes(search) ||
+      (s.workType || "").includes(search) ||
+      (s.contactInfo?.name || "").includes(search)
   );
 
   return (
     <div>
       <PageHeader
-        title="발주처"
-        subtitle="발주처 관리"
+        title="하도급 거래처"
+        subtitle="하도급사 관리"
         actions={
-          <button
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
-            style={{ background: "rgba(255,255,255,0.2)" }}
-            onClick={() => setShowModal(true)}
-          >
-            <Plus size={14} />
-            발주처 등록
-          </button>
+          canEdit ? (
+            <button
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
+              style={{ background: "rgba(255,255,255,0.2)" }}
+              onClick={() => setShowModal(true)}
+            >
+              <Plus size={14} />
+              하도급사 등록
+            </button>
+          ) : undefined
         }
       />
 
@@ -109,9 +111,9 @@ export default function ClientsPage() {
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="거래처명, 사업자번호, 담당자 검색"
+              placeholder="업체명, 사업자번호, 공종, 담당자 검색"
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none"
-              style={{ border: "1px solid #E6E6E6", width: "300px", color: "#333" }}
+              style={{ border: "1px solid #E6E6E6", width: "320px", color: "#333" }}
             />
           </div>
         </div>
@@ -121,12 +123,12 @@ export default function ClientsPage() {
           <table className="ct-table">
             <thead>
               <tr>
-                <th>거래처명</th>
+                <th>업체명</th>
                 <th>사업자번호</th>
-                <th>대표자명</th>
+                <th>공종</th>
                 <th>담당자</th>
                 <th>연락처</th>
-                <th>도급계약 수</th>
+                <th>하도급계약 수</th>
                 <th>등록일</th>
               </tr>
             </thead>
@@ -141,26 +143,26 @@ export default function ClientsPage() {
                 <tr>
                   <td colSpan={7} className="text-center py-12">
                     <Building2 size={32} style={{ color: "#DDD", margin: "0 auto 8px" }} />
-                    <div style={{ color: "#AAA", fontSize: 13 }}>등록된 거래처가 없습니다.</div>
+                    <div style={{ color: "#AAA", fontSize: 13 }}>등록된 하도급사가 없습니다.</div>
                   </td>
                 </tr>
               ) : (
-                filtered.map((c: any) => (
-                  <tr key={c.id} className="cursor-pointer">
+                filtered.map((s: any) => (
+                  <tr key={s.id}>
                     <td className="font-medium" style={{ color: "#1C90FB" }}>
-                      {c.name}
+                      {s.name}
                     </td>
-                    <td>{c.businessNo || "-"}</td>
-                    <td>{c.ceoName || "-"}</td>
-                    <td>{c.contactInfo?.name || "-"}</td>
-                    <td>{c.contactInfo?.phone || "-"}</td>
+                    <td>{s.businessNo || "-"}</td>
+                    <td>{s.workType || "-"}</td>
+                    <td>{s.contactInfo?.name || "-"}</td>
+                    <td>{s.contactInfo?.phone || "-"}</td>
                     <td>
                       <span className="ct-badge ct-badge-blue">
-                        {c.projects?.length || 0}건
+                        {s.subcontracts?.length || 0}건
                       </span>
                     </td>
                     <td style={{ color: "#888" }}>
-                      {new Date(c.createdAt).toLocaleDateString("ko-KR")}
+                      {new Date(s.createdAt).toLocaleDateString("ko-KR")}
                     </td>
                   </tr>
                 ))
@@ -174,16 +176,16 @@ export default function ClientsPage() {
       {showModal && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
           <div className="bg-white rounded-xl p-6 w-full max-w-md" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-            <h3 className="font-semibold text-base mb-4" style={{ color: "#333" }}>발주처 등록</h3>
+            <h3 className="font-semibold text-base mb-4" style={{ color: "#333" }}>하도급사 등록</h3>
             <div className="space-y-3">
 
-              {/* 거래처명 */}
+              {/* 업체명 */}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>거래처명*</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>업체명*</label>
                 <input
                   value={form.name}
                   onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="예: 한국도로공사"
+                  placeholder="예: (주)한국건설"
                   className="w-full px-3 py-2 rounded text-sm outline-none"
                   style={{ border: "1px solid #E6E6E6", color: "#333" }}
                 />
@@ -191,7 +193,9 @@ export default function ClientsPage() {
 
               {/* 사업자번호 + 중복확인 */}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>사업자번호* <span style={{ fontWeight: 400, color: "#AAA" }}>(10자리)</span></label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>
+                  사업자번호* <span style={{ fontWeight: 400, color: "#AAA" }}>(10자리)</span>
+                </label>
                 <div className="flex gap-2">
                   <input
                     value={form.businessNo}
@@ -235,8 +239,6 @@ export default function ClientsPage() {
                     중복확인
                   </button>
                 </div>
-
-                {/* 상태 메시지 — 우선순위: 미완성 > 중복 > 사용가능 > 미확인 */}
                 {bizPartial && (
                   <div className="flex items-center gap-1 mt-1.5">
                     <AlertCircle size={13} style={{ color: "#F5A623" }} />
@@ -265,12 +267,13 @@ export default function ClientsPage() {
                 )}
               </div>
 
-              {/* 대표자명 */}
+              {/* 공종 */}
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>대표자명</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>공종</label>
                 <input
-                  value={form.ceoName}
-                  onChange={(e) => setForm((f) => ({ ...f, ceoName: e.target.value }))}
+                  value={form.workType}
+                  onChange={(e) => setForm((f) => ({ ...f, workType: e.target.value }))}
+                  placeholder="예: 토목, 전기, 설비"
                   className="w-full px-3 py-2 rounded text-sm outline-none"
                   style={{ border: "1px solid #E6E6E6", color: "#333" }}
                 />

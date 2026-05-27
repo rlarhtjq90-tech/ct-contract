@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -11,21 +12,72 @@ import {
   TrendingUp,
   FileBarChart,
   Bell,
+  ChevronRight,
 } from "lucide-react";
 
-const navItems = [
+type SubItem = { href: string; icon: React.ElementType; label: string };
+type NavItem = {
+  href: string;
+  icon: React.ElementType;
+  label: string;
+  children?: SubItem[];
+};
+
+const navItems: NavItem[] = [
   { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
-  { href: "/clients", icon: Building2, label: "거래처" },
-  { href: "/projects", icon: FolderOpen, label: "도급계약" },
-  { href: "/subcontracts", icon: FileText, label: "하도급계약" },
-  { href: "/billings", icon: BarChart3, label: "기성입력" },
+  {
+    href: "/projects",
+    icon: FolderOpen,
+    label: "도급계약",
+    children: [
+      { href: "/clients", icon: Building2, label: "발주처" },
+      { href: "/project-billings", icon: BarChart3, label: "기성현황" },
+    ],
+  },
+  {
+    href: "/subcontracts",
+    icon: FileText,
+    label: "하도급계약",
+    children: [
+      { href: "/subcontractors", icon: Building2, label: "하도급사" },
+      { href: "/billings", icon: BarChart3, label: "기성현황" },
+    ],
+  },
   { href: "/trends", icon: TrendingUp, label: "변동추이" },
   { href: "/reports", icon: FileBarChart, label: "리포트" },
   { href: "/notifications", icon: Bell, label: "알림" },
 ];
 
+// 각 자식 경로가 어느 부모(href)에 속하는지 미리 맵핑
+const childParentMap: Record<string, string> = {
+  "/clients": "/projects",
+  "/project-billings": "/projects",
+  "/subcontractors": "/subcontracts",
+  "/billings": "/subcontracts",
+};
+
 export function Sidebar() {
   const pathname = usePathname();
+  const [openParent, setOpenParent] = useState<string | null>(null);
+
+  useEffect(() => {
+    // 현재 경로가 부모 경로 자체인지 확인
+    for (const item of navItems) {
+      if (item.children && pathname === item.href) {
+        setOpenParent(item.href);
+        return;
+      }
+    }
+    // 자식 경로인지 확인 — 맵핑 테이블로 부모 결정
+    for (const [childHref, parentHref] of Object.entries(childParentMap)) {
+      if (pathname === childHref || pathname.startsWith(childHref + "/")) {
+        setOpenParent(parentHref);
+        return;
+      }
+    }
+    // 그 외 경로(대시보드, 변동추이 등)는 openParent를 닫음
+    setOpenParent(null);
+  }, [pathname]);
 
   return (
     <aside
@@ -53,22 +105,78 @@ export function Sidebar() {
 
       {/* 네비게이션 */}
       <nav className="flex-1 py-3">
-        {navItems.map(({ href, icon: Icon, label }) => {
-          const isActive = pathname === href || (href !== "/dashboard" && pathname.startsWith(href));
+        {navItems.map((item) => {
+          const { href, label, children } = item;
+          const Icon = item.icon;
+          const hasChildren = !!children && children.length > 0;
+
+          // 부모 자체 경로 활성
+          const selfActive =
+            pathname === href ||
+            (!hasChildren && href !== "/dashboard" && pathname.startsWith(href + "/"));
+
+          // 이 부모가 펼쳐져 있는지
+          const isExpanded = hasChildren && openParent === href;
+
           return (
-            <Link key={href} href={href}>
-              <div
-                className="flex items-center gap-3 mx-2 px-3 py-2 rounded cursor-pointer transition-all"
-                style={{
-                  background: isActive ? "#EFF7FF" : "transparent",
-                  color: isActive ? "#1C90FB" : "#B4BCC5",
-                  marginBottom: "2px",
+            <div key={`${href}-${label}`}>
+              {/* 부모 항목 */}
+              <Link
+                href={href}
+                onClick={() => {
+                  if (hasChildren) {
+                    setOpenParent((prev) => (prev === href ? null : href));
+                  }
                 }}
               >
-                <Icon size={16} />
-                <span className="text-sm font-medium">{label}</span>
-              </div>
-            </Link>
+                <div
+                  className="flex items-center gap-3 mx-2 px-3 py-2 rounded cursor-pointer transition-all"
+                  style={{
+                    background: selfActive ? "#EFF7FF" : "transparent",
+                    color: selfActive ? "#1C90FB" : isExpanded ? "#FFFFFF" : "#B4BCC5",
+                    marginBottom: "2px",
+                  }}
+                >
+                  <Icon size={16} />
+                  <span className="text-sm font-medium flex-1">{label}</span>
+                  {hasChildren && (
+                    <ChevronRight
+                      size={13}
+                      style={{
+                        transform: isExpanded ? "rotate(90deg)" : "rotate(0deg)",
+                        transition: "transform 0.15s",
+                        opacity: 0.7,
+                      }}
+                    />
+                  )}
+                </div>
+              </Link>
+
+              {/* 자식 항목 */}
+              {hasChildren && isExpanded && (
+                <div style={{ background: "#2D313E" }}>
+                  {children!.map(({ href: childHref, icon: ChildIcon, label: childLabel }) => {
+                    const childIsActive =
+                      pathname === childHref || pathname.startsWith(childHref + "/");
+                    return (
+                      <Link key={childHref} href={childHref}>
+                        <div
+                          className="flex items-center gap-3 mx-2 pl-7 pr-3 py-2 rounded cursor-pointer transition-all"
+                          style={{
+                            background: childIsActive ? "#EFF7FF" : "transparent",
+                            color: childIsActive ? "#1C90FB" : "#B4BCC5",
+                            marginBottom: "2px",
+                          }}
+                        >
+                          <ChildIcon size={14} />
+                          <span className="text-sm font-medium">{childLabel}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>

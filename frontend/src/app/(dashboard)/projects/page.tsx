@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { projects, clients as clientsApi } from "@/lib/api";
+import { projects, clients as clientsApi, deleteRequests as deleteRequestsApi } from "@/lib/api";
 import { PageHeader } from "@/components/layout/page-header";
-import { Plus, Search, FolderOpen, GitBranch } from "lucide-react";
+import { Plus, Search, FolderOpen, GitBranch, Trash2, Check, X } from "lucide-react";
 import { fmtMoney } from "@/lib/format";
-import { useIsAdmin, useCanEdit } from "@/lib/auth";
+import { useIsAdmin, useCanEdit, useUser } from "@/lib/auth";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "진행중", completed: "완료", suspended: "일시중단", cancelled: "취소",
@@ -19,24 +19,40 @@ const EMPTY_FORM = {
   clientId: "", projectCode: "", name: "", contractAmount: "",
   contractDate: "", startDate: "", endDate: "", description: "",
 };
-
 const EMPTY_CHANGE = { deltaAmount: "", reason: "", effectiveDate: "" };
+const EMPTY_DELETE = { reason: "" };
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
-  const isAdmin  = useIsAdmin();
-  const canEdit  = useCanEdit();
+  const user = useUser();
+  const isAdmin = useIsAdmin();
+  const canEdit = useCanEdit();
+  const isPm = user?.role === "pm";
 
-  const [search, setSearch]       = useState("");
+  const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm]           = useState(EMPTY_FORM);
+  const [form, setForm] = useState(EMPTY_FORM);
 
   // 변경계약 모달
-  const [changeTarget, setChangeTarget] = useState<any>(null); // 선택된 프로젝트
-  const [changeForm, setChangeForm]     = useState(EMPTY_CHANGE);
+  const [changeTarget, setChangeTarget] = useState<any>(null);
+  const [changeForm, setChangeForm] = useState(EMPTY_CHANGE);
+
+  // 삭제요청 모달
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteForm, setDeleteForm] = useState(EMPTY_DELETE);
 
   const { data = [], isLoading } = useQuery({ queryKey: ["projects"], queryFn: projects.getAll });
   const { data: clientsList = [] } = useQuery({ queryKey: ["clients"], queryFn: clientsApi.getAll });
+  const { data: allDeleteReqs = [] } = useQuery({ queryKey: ["delete-requests"], queryFn: deleteRequestsApi.getAll });
+
+  // pending 삭제요청 맵: "project_ID" → request
+  const pendingMap = useMemo(() => {
+    const m: Record<string, any> = {};
+    (allDeleteReqs as any[]).filter((r) => r.status === "pending").forEach((r) => {
+      m[`${r.targetType}_${r.targetId}`] = r;
+    });
+    return m;
+  }, [allDeleteReqs]);
 
   const createMutation = useMutation({
     mutationFn: projects.create,
@@ -56,9 +72,32 @@ export default function ProjectsPage() {
     },
   });
 
+  const deleteRequestMutation = useMutation({
+    mutationFn: deleteRequestsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delete-requests"] });
+      setDeleteTarget(null);
+      setDeleteForm(EMPTY_DELETE);
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: number) => deleteRequestsApi.approve(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["projects"] });
+      queryClient.invalidateQueries({ queryKey: ["delete-requests"] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: number) => deleteRequestsApi.reject(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["delete-requests"] }); },
+  });
+
   const formatAmt = fmtMoney;
 
-  const colCount = (isAdmin ? 1 : 0) + 7 + (canEdit ? 1 : 0); // 프로젝트코드 + 기본6 + 계약일 + 변경
+  // 컬럼 수: [프로젝트코드] + 프로젝트명+발주처+계약금액+계약일+착공일+준공일+상태(7) + [액션]
+  const colCount = (isAdmin ? 1 : 0) + 7 + (canEdit ? 1 : 0);
 
   const filtered = data.filter(
     (p: any) => p.name.includes(search) || (p.projectCode || "").includes(search) || (p.client?.name || "").includes(search)
@@ -102,7 +141,7 @@ export default function ProjectsPage() {
                 <th>착공일</th>
                 <th>준공일</th>
                 <th>상태</th>
-                {canEdit && <th className="text-center">변경</th>}
+                {canEdit && <th className="text-center">액션</th>}
               </tr>
             </thead>
             <tbody>
@@ -115,29 +154,66 @@ export default function ProjectsPage() {
                     <div style={{ color: "#AAA", fontSize: 13 }}>등록된 도급계약이 없습니다.</div>
                   </td>
                 </tr>
-              ) : filtered.map((p: any) => (
-                <tr key={p.id}>
-                  {isAdmin && <td className="font-mono text-xs" style={{ color: "#888" }}>{p.projectCode}</td>}
-                  <td className="font-medium" style={{ color: "#1C90FB" }}>{p.name}</td>
-                  <td style={{ color: "#666" }}>{p.client?.name || "-"}</td>
-                  <td className="text-center">{formatAmt(Number(p.contractAmount))}</td>
-                  <td style={{ color: "#888" }}>{p.contractDate ? new Date(p.contractDate).toLocaleDateString("ko-KR") : "-"}</td>
-                  <td style={{ color: "#888" }}>{p.startDate ? new Date(p.startDate).toLocaleDateString("ko-KR") : "-"}</td>
-                  <td style={{ color: "#888" }}>{p.endDate ? new Date(p.endDate).toLocaleDateString("ko-KR") : "-"}</td>
-                  <td><span className={`ct-badge ${STATUS_COLORS[p.status] || "ct-badge-gray"}`}>{STATUS_LABELS[p.status]}</span></td>
-                  {canEdit && (
-                    <td className="text-center">
-                      <button
-                        onClick={() => { setChangeTarget(p); setChangeForm(EMPTY_CHANGE); }}
-                        className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                        style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}
-                      >
-                        <GitBranch size={11} />변경
-                      </button>
-                    </td>
-                  )}
-                </tr>
-              ))}
+              ) : filtered.map((p: any) => {
+                const pendingReq = pendingMap[`project_${p.id}`];
+                return (
+                  <tr key={p.id} style={pendingReq ? { background: "#FFF8F8" } : {}}>
+                    {isAdmin && <td className="font-mono text-xs" style={{ color: "#888" }}>{p.projectCode}</td>}
+                    <td className="font-medium" style={{ color: "#1C90FB" }}>{p.name}</td>
+                    <td style={{ color: "#666" }}>{p.client?.name || "-"}</td>
+                    <td className="text-center">{formatAmt(Number(p.contractAmount))}</td>
+                    <td style={{ color: "#888" }}>{p.contractDate ? new Date(p.contractDate).toLocaleDateString("ko-KR") : "-"}</td>
+                    <td style={{ color: "#888" }}>{p.startDate ? new Date(p.startDate).toLocaleDateString("ko-KR") : "-"}</td>
+                    <td style={{ color: "#888" }}>{p.endDate ? new Date(p.endDate).toLocaleDateString("ko-KR") : "-"}</td>
+                    <td><span className={`ct-badge ${STATUS_COLORS[p.status] || "ct-badge-gray"}`}>{STATUS_LABELS[p.status]}</span></td>
+                    {canEdit && (
+                      <td className="text-center">
+                        <div className="flex items-center justify-center gap-1">
+                          {/* 변경 버튼 */}
+                          <button onClick={() => { setChangeTarget(p); setChangeForm(EMPTY_CHANGE); }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                            style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}>
+                            <GitBranch size={11} />변경
+                          </button>
+
+                          {/* PM: 삭제요청 버튼 */}
+                          {isPm && !pendingReq && (
+                            <button onClick={() => { setDeleteTarget(p); setDeleteForm(EMPTY_DELETE); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                              style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                              <Trash2 size={11} />삭제
+                            </button>
+                          )}
+                          {isPm && pendingReq && (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
+                              style={{ background: "#FFF3E0", color: "#E67E22", border: "1px solid #FFD9A0" }}>
+                              삭제 대기
+                            </span>
+                          )}
+
+                          {/* Admin: 승인/거절 버튼 */}
+                          {isAdmin && pendingReq && (
+                            <>
+                              <button onClick={() => approveMutation.mutate(pendingReq.id)}
+                                disabled={approveMutation.isPending}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                                style={{ background: "#F0FFF4", color: "#27AE60", border: "1px solid #A8E6BE" }}>
+                                <Check size={11} />승인
+                              </button>
+                              <button onClick={() => rejectMutation.mutate(pendingReq.id)}
+                                disabled={rejectMutation.isPending}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                                <X size={11} />거절
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    )}
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -225,13 +301,13 @@ export default function ProjectsPage() {
             <p className="text-xs mb-4" style={{ color: "#888" }}>{changeTarget.name}</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경금액 (원, 음수 가능)*</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경금액 (원)*</label>
                 <input type="text" inputMode="numeric" value={changeForm.deltaAmount}
                   onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9\-]/g, "");
-                    setChangeForm((f) => ({ ...f, deltaAmount: raw }));
+                    const raw = e.target.value.replace(/[^0-9]/g, "");
+                    setChangeForm((f) => ({ ...f, deltaAmount: raw ? Number(raw).toLocaleString("ko-KR") : "" }));
                   }}
-                  placeholder="예: -500,000,000"
+                  placeholder="예: 500,000,000"
                   className="w-full px-3 py-2 rounded text-sm outline-none"
                   style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
@@ -256,12 +332,46 @@ export default function ProjectsPage() {
               <button
                 onClick={() => changeMutation.mutate({
                   id: changeTarget.id,
-                  data: { deltaAmount: parseInt(changeForm.deltaAmount), reason: changeForm.reason, effectiveDate: changeForm.effectiveDate || undefined },
+                  data: { deltaAmount: parseInt(changeForm.deltaAmount.replace(/,/g, "")), reason: changeForm.reason, effectiveDate: changeForm.effectiveDate || undefined },
                 })}
                 disabled={!changeForm.deltaAmount || !changeForm.reason || changeMutation.isPending}
                 className="flex-1 py-2 rounded text-sm text-white font-medium"
                 style={{ background: "#1C90FB" }}>
                 {changeMutation.isPending ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제요청 모달 (PM 전용) */}
+      {deleteTarget && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+            <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>삭제 승인 요청</h3>
+            <p className="text-xs mb-1" style={{ color: "#888" }}>{deleteTarget.name}</p>
+            <p className="text-xs mb-4" style={{ color: "#FC5356" }}>관리자 승인 후 삭제됩니다.</p>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>삭제 사유</label>
+              <textarea value={deleteForm.reason}
+                onChange={(e) => setDeleteForm((f) => ({ ...f, reason: e.target.value }))}
+                rows={3} placeholder="삭제 사유를 입력하세요 (선택)"
+                className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
+                style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
+              <button
+                onClick={() => deleteRequestMutation.mutate({
+                  targetType: "project",
+                  targetId: deleteTarget.id,
+                  targetName: deleteTarget.name,
+                  reason: deleteForm.reason,
+                })}
+                disabled={deleteRequestMutation.isPending}
+                className="flex-1 py-2 rounded text-sm text-white font-medium"
+                style={{ background: "#FC5356" }}>
+                {deleteRequestMutation.isPending ? "요청 중..." : "삭제 요청"}
               </button>
             </div>
           </div>

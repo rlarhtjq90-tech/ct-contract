@@ -13,8 +13,12 @@ import { ContractChange } from './entities/contract-change.entity';
 import { ProjectMetric } from './entities/project-metric.entity';
 import { MonthlySnapshot } from './entities/monthly-snapshot.entity';
 import { Notification } from './entities/notification.entity';
+import { DeleteRequest } from './entities/delete-request.entity';
+import { ProjectBilling } from './entities/project-billing.entity';
 
 import { AuthModule } from './auth/auth.module';
+import { DeleteRequestsModule } from './delete-requests/delete-requests.module';
+import { ProjectBillingsModule } from './project-billings/project-billings.module';
 import { UsersModule } from './users/users.module';
 import { ClientsModule } from './clients/clients.module';
 import { ProjectsModule } from './projects/projects.module';
@@ -30,7 +34,7 @@ import { GatewayModule } from './gateway/gateway.module';
 const ENTITIES = [
   User, Client, Project, Subcontractor, Subcontract,
   MonthlyBilling, ContractChange, ProjectMetric,
-  MonthlySnapshot, Notification,
+  MonthlySnapshot, Notification, DeleteRequest, ProjectBilling,
 ];
 
 @Module({
@@ -61,6 +65,8 @@ const ENTITIES = [
     NotificationsModule,
     SnapshotsModule,
     GatewayModule,
+    DeleteRequestsModule,
+    ProjectBillingsModule,
   ],
 })
 export class AppModule {}

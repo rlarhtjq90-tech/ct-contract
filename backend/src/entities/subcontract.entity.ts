@@ -47,6 +47,12 @@ export class Subcontract {
   @Column({ name: 'contract_date', type: 'date', nullable: true })
   contractDate: Date;
 
+  @Column({ name: 'start_date', type: 'date', nullable: true })
+  startDate: Date;
+
+  @Column({ name: 'end_date', type: 'date', nullable: true })
+  endDate: Date;
+
   @Column({ type: 'simple-enum', enum: SubcontractStatus, default: SubcontractStatus.ACTIVE })
   status: SubcontractStatus;
 

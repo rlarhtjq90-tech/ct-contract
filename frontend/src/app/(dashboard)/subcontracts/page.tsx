@@ -1,42 +1,34 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { subcontracts, projects as projectsApi, subcontractors as subcontractorsApi } from "@/lib/api";
+import { subcontracts, projects as projectsApi, subcontractors as subcontractorsApi, deleteRequests as deleteRequestsApi } from "@/lib/api";
 import { PageHeader } from "@/components/layout/page-header";
-import { Plus, Search, FileText, GitBranch } from "lucide-react";
+import { Plus, Search, FileText, GitBranch, Trash2, Check, X } from "lucide-react";
 import { fmtNum } from "@/lib/format";
-import { useIsAdmin, useCanEdit } from "@/lib/auth";
+import { useIsAdmin, useCanEdit, useUser } from "@/lib/auth";
 
 const STATUS_LABELS: Record<string, string> = {
-  active: "진행중",
-  completed: "완료",
-  suspended: "일시중단",
-  cancelled: "취소",
+  active: "진행중", completed: "완료", suspended: "일시중단", cancelled: "취소",
 };
-
 const STATUS_COLORS: Record<string, string> = {
-  active: "ct-badge-blue",
-  completed: "ct-badge-green",
-  suspended: "ct-badge-orange",
-  cancelled: "ct-badge-gray",
+  active: "ct-badge-blue", completed: "ct-badge-green", suspended: "ct-badge-orange", cancelled: "ct-badge-gray",
 };
 
 const EMPTY_FORM = {
-  projectId: "",
-  subcontractorId: "",
-  contractNo: "",
-  workScope: "",
-  contractAmount: "",
-  contractDate: "",
+  projectId: "", subcontractorId: "", contractNo: "",
+  workScope: "", contractAmount: "", contractDate: "",
+  startDate: "", endDate: "",
 };
-
 const EMPTY_CHANGE = { deltaAmount: "", reason: "", effectiveDate: "" };
+const EMPTY_DELETE = { reason: "" };
 
 export default function SubcontractsPage() {
   const queryClient = useQueryClient();
+  const user = useUser();
   const isAdmin = useIsAdmin();
   const canEdit = useCanEdit();
+  const isPm = user?.role === "pm";
 
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -46,20 +38,23 @@ export default function SubcontractsPage() {
   const [changeTarget, setChangeTarget] = useState<any>(null);
   const [changeForm, setChangeForm] = useState(EMPTY_CHANGE);
 
-  const { data: subs = [], isLoading } = useQuery({
-    queryKey: ["subcontracts"],
-    queryFn: () => subcontracts.getAll(),
-  });
+  // 삭제요청 모달
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
+  const [deleteForm, setDeleteForm] = useState(EMPTY_DELETE);
 
-  const { data: projectsList = [] } = useQuery({
-    queryKey: ["projects"],
-    queryFn: projectsApi.getAll,
-  });
+  const { data: subs = [], isLoading } = useQuery({ queryKey: ["subcontracts"], queryFn: () => subcontracts.getAll() });
+  const { data: projectsList = [] } = useQuery({ queryKey: ["projects"], queryFn: projectsApi.getAll });
+  const { data: subcontractorsList = [] } = useQuery({ queryKey: ["subcontractors"], queryFn: subcontractorsApi.getAll });
+  const { data: allDeleteReqs = [] } = useQuery({ queryKey: ["delete-requests"], queryFn: deleteRequestsApi.getAll });
 
-  const { data: subcontractorsList = [] } = useQuery({
-    queryKey: ["subcontractors"],
-    queryFn: subcontractorsApi.getAll,
-  });
+  // pending 삭제요청 맵: "subcontract_ID" → request
+  const pendingMap = useMemo(() => {
+    const m: Record<string, any> = {};
+    (allDeleteReqs as any[]).filter((r) => r.status === "pending").forEach((r) => {
+      m[`${r.targetType}_${r.targetId}`] = r;
+    });
+    return m;
+  }, [allDeleteReqs]);
 
   const createMutation = useMutation({
     mutationFn: subcontracts.create,
@@ -80,14 +75,35 @@ export default function SubcontractsPage() {
     },
   });
 
-  // 컬럼 수: 계약번호(admin) + 하도급사+도급계약+공종+계약금액+계약일+상태(6) + 변경(canEdit)
-  const colCount = (isAdmin ? 1 : 0) + 6 + (canEdit ? 1 : 0);
+  const deleteRequestMutation = useMutation({
+    mutationFn: deleteRequestsApi.create,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["delete-requests"] });
+      setDeleteTarget(null);
+      setDeleteForm(EMPTY_DELETE);
+    },
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: number) => deleteRequestsApi.approve(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subcontracts"] });
+      queryClient.invalidateQueries({ queryKey: ["delete-requests"] });
+    },
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: number) => deleteRequestsApi.reject(id),
+    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ["delete-requests"] }); },
+  });
+
+  const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("ko-KR") : "-";
+
+  // 컬럼 수: [계약번호] + 하도급사 + 도급계약 + 계약금액 + 계약일 + 착공일 + 준공일 + 상태 + [액션]
+  const colCount = (isAdmin ? 1 : 0) + 7 + (canEdit ? 1 : 0);
 
   const filtered = subs.filter(
-    (s: any) =>
-      (s.subcontractor?.name || "").includes(search) ||
-      (s.project?.name || "").includes(search) ||
-      (s.contractNo || "").includes(search)
+    (s: any) => (s.subcontractor?.name || "").includes(search) || (s.project?.name || "").includes(search) || (s.contractNo || "").includes(search)
   );
 
   return (
@@ -97,13 +113,10 @@ export default function SubcontractsPage() {
         subtitle={`총 ${subs.length}건`}
         actions={
           canEdit ? (
-            <button
+            <button onClick={() => setShowModal(true)}
               className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
-              style={{ background: "rgba(255,255,255,0.2)" }}
-              onClick={() => setShowModal(true)}
-            >
-              <Plus size={14} />
-              하도급계약 등록
+              style={{ background: "rgba(255,255,255,0.2)" }}>
+              <Plus size={14} />하도급계약 등록
             </button>
           ) : undefined
         }
@@ -113,13 +126,10 @@ export default function SubcontractsPage() {
         <div className="flex items-center gap-3 mb-4">
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#AAA" }} />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
+            <input value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="하도급사, 프로젝트, 계약번호 검색"
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none"
-              style={{ border: "1px solid #E6E6E6", width: "300px", color: "#333" }}
-            />
+              style={{ border: "1px solid #E6E6E6", width: "300px", color: "#333" }} />
           </div>
         </div>
 
@@ -130,11 +140,12 @@ export default function SubcontractsPage() {
                 {isAdmin && <th>계약번호</th>}
                 <th>하도급사</th>
                 <th>도급계약</th>
-                <th>공종</th>
                 <th className="text-center">계약금액</th>
-                <th>계약일</th>
+                <th style={{ whiteSpace: "nowrap" }}>계약일</th>
+                <th style={{ whiteSpace: "nowrap" }}>착공일</th>
+                <th style={{ whiteSpace: "nowrap" }}>준공일</th>
                 <th>상태</th>
-                {canEdit && <th className="text-center">변경</th>}
+                {canEdit && <th className="text-center">액션</th>}
               </tr>
             </thead>
             <tbody>
@@ -147,34 +158,66 @@ export default function SubcontractsPage() {
                     <div style={{ color: "#AAA", fontSize: 13 }}>등록된 하도급계약이 없습니다.</div>
                   </td>
                 </tr>
-              ) : (
-                filtered.map((s: any) => (
-                  <tr key={s.id}>
+              ) : filtered.map((s: any) => {
+                const pendingReq = pendingMap[`subcontract_${s.id}`];
+                return (
+                  <tr key={s.id} style={pendingReq ? { background: "#FFF8F8" } : {}}>
                     {isAdmin && <td className="font-mono text-xs" style={{ color: "#666" }}>{s.contractNo || "-"}</td>}
                     <td className="font-medium" style={{ color: "#1C90FB" }}>{s.subcontractor?.name}</td>
                     <td style={{ color: "#333" }}>{s.project?.name}</td>
-                    <td style={{ color: "#666" }}>{s.subcontractor?.workType || "-"}</td>
                     <td className="text-center font-medium">{fmtNum(Number(s.contractAmount))}원</td>
-                    <td style={{ color: "#888" }}>{s.contractDate ? new Date(s.contractDate).toLocaleDateString("ko-KR") : "-"}</td>
-                    <td>
-                      <span className={`ct-badge ${STATUS_COLORS[s.status] || "ct-badge-gray"}`}>
-                        {STATUS_LABELS[s.status] || s.status}
-                      </span>
-                    </td>
+                    <td style={{ color: "#888", whiteSpace: "nowrap" }}>{fmtDate(s.contractDate)}</td>
+                    <td style={{ color: "#888", whiteSpace: "nowrap" }}>{fmtDate(s.startDate)}</td>
+                    <td style={{ color: "#888", whiteSpace: "nowrap" }}>{fmtDate(s.endDate)}</td>
+                    <td><span className={`ct-badge ${STATUS_COLORS[s.status] || "ct-badge-gray"}`}>{STATUS_LABELS[s.status] || s.status}</span></td>
                     {canEdit && (
                       <td className="text-center">
-                        <button
-                          onClick={() => { setChangeTarget(s); setChangeForm(EMPTY_CHANGE); }}
-                          className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                          style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}
-                        >
-                          <GitBranch size={11} />변경
-                        </button>
+                        <div className="flex items-center justify-center gap-1">
+                          {/* 변경 버튼 (항상) */}
+                          <button onClick={() => { setChangeTarget(s); setChangeForm(EMPTY_CHANGE); }}
+                            className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                            style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}>
+                            <GitBranch size={11} />변경
+                          </button>
+
+                          {/* PM: 삭제요청 버튼 */}
+                          {isPm && !pendingReq && (
+                            <button onClick={() => { setDeleteTarget(s); setDeleteForm(EMPTY_DELETE); }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                              style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                              <Trash2 size={11} />삭제
+                            </button>
+                          )}
+                          {isPm && pendingReq && (
+                            <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium"
+                              style={{ background: "#FFF3E0", color: "#E67E22", border: "1px solid #FFD9A0" }}>
+                              삭제 대기
+                            </span>
+                          )}
+
+                          {/* Admin: 승인/거절 버튼 */}
+                          {isAdmin && pendingReq && (
+                            <>
+                              <button onClick={() => approveMutation.mutate(pendingReq.id)}
+                                disabled={approveMutation.isPending}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                                style={{ background: "#F0FFF4", color: "#27AE60", border: "1px solid #A8E6BE" }}>
+                                <Check size={11} />승인
+                              </button>
+                              <button onClick={() => rejectMutation.mutate(pendingReq.id)}
+                                disabled={rejectMutation.isPending}
+                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
+                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                                <X size={11} />거절
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
-                ))
-              )}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -188,65 +231,54 @@ export default function SubcontractsPage() {
             <div className="grid grid-cols-2 gap-3">
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>도급계약*</label>
-                <select
-                  value={form.projectId}
-                  onChange={(e) => setForm((f) => ({ ...f, projectId: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                >
+                <select value={form.projectId} onChange={(e) => setForm((f) => ({ ...f, projectId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }}>
                   <option value="">도급계약 선택</option>
-                  {projectsList.map((p: any) => (
-                    <option key={p.id} value={p.id}>{p.name} ({p.projectCode})</option>
-                  ))}
+                  {projectsList.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.projectCode})</option>)}
                 </select>
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>하도급사*</label>
-                <select
-                  value={form.subcontractorId}
-                  onChange={(e) => setForm((f) => ({ ...f, subcontractorId: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                >
+                <select value={form.subcontractorId} onChange={(e) => setForm((f) => ({ ...f, subcontractorId: e.target.value }))}
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }}>
                   <option value="">하도급사 선택</option>
-                  {subcontractorsList.map((s: any) => (
-                    <option key={s.id} value={s.id}>{s.name} ({s.workType || ""})</option>
-                  ))}
+                  {subcontractorsList.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.workType || ""})</option>)}
                 </select>
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약번호</label>
                 <input value={form.contractNo} onChange={(e) => setForm((f) => ({ ...f, contractNo: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약일</label>
                 <input type="date" value={form.contractDate} onChange={(e) => setForm((f) => ({ ...f, contractDate: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>착공일</label>
+                <input type="date" value={form.startDate} onChange={(e) => setForm((f) => ({ ...f, startDate: e.target.value }))}
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>준공일</label>
+                <input type="date" value={form.endDate} onChange={(e) => setForm((f) => ({ ...f, endDate: e.target.value }))}
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약금액 (원)*</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={form.contractAmount}
+                <input type="text" inputMode="numeric" value={form.contractAmount}
                   onChange={(e) => {
                     const raw = e.target.value.replace(/[^0-9]/g, "");
-                    const formatted = raw ? Number(raw).toLocaleString("ko-KR") : "";
-                    setForm((f) => ({ ...f, contractAmount: formatted }));
+                    setForm((f) => ({ ...f, contractAmount: raw ? Number(raw).toLocaleString("ko-KR") : "" }));
                   }}
                   placeholder="예: 500,000,000"
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                />
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>공사 범위</label>
                 <textarea value={form.workScope} onChange={(e) => setForm((f) => ({ ...f, workScope: e.target.value }))}
-                  rows={2}
-                  className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
+                  rows={2} className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
                   style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
             </div>
@@ -261,8 +293,7 @@ export default function SubcontractsPage() {
                 })}
                 disabled={!form.projectId || !form.subcontractorId || !form.contractAmount || createMutation.isPending}
                 className="flex-1 py-2 rounded text-sm text-white font-medium"
-                style={{ background: "#1C90FB" }}
-              >
+                style={{ background: "#1C90FB" }}>
                 {createMutation.isPending ? "저장 중..." : "저장"}
               </button>
             </div>
@@ -275,45 +306,31 @@ export default function SubcontractsPage() {
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
           <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
             <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>변경계약 등록</h3>
-            <p className="text-xs mb-4" style={{ color: "#888" }}>
-              {changeTarget.subcontractor?.name} · {changeTarget.project?.name}
-            </p>
+            <p className="text-xs mb-4" style={{ color: "#888" }}>{changeTarget.subcontractor?.name} · {changeTarget.project?.name}</p>
             <div className="space-y-3">
               <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경금액 (원, 음수 가능)*</label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={changeForm.deltaAmount}
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경금액 (원)*</label>
+                <input type="text" inputMode="numeric" value={changeForm.deltaAmount}
                   onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9\-]/g, "");
-                    setChangeForm((f) => ({ ...f, deltaAmount: raw }));
+                    const raw = e.target.value.replace(/[^0-9]/g, "");
+                    setChangeForm((f) => ({ ...f, deltaAmount: raw ? Number(raw).toLocaleString("ko-KR") : "" }));
                   }}
-                  placeholder="예: -50,000,000"
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                />
+                  placeholder="예: 50,000,000"
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경일</label>
-                <input
-                  type="date"
-                  value={changeForm.effectiveDate}
+                <input type="date" value={changeForm.effectiveDate}
                   onChange={(e) => setChangeForm((f) => ({ ...f, effectiveDate: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                />
+                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경사유*</label>
-                <textarea
-                  value={changeForm.reason}
+                <textarea value={changeForm.reason}
                   onChange={(e) => setChangeForm((f) => ({ ...f, reason: e.target.value }))}
-                  rows={3}
-                  placeholder="변경 사유를 입력하세요"
+                  rows={3} placeholder="변경 사유를 입력하세요"
                   className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                />
+                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
             </div>
             <div className="flex gap-2 mt-5">
@@ -321,17 +338,46 @@ export default function SubcontractsPage() {
               <button
                 onClick={() => changeMutation.mutate({
                   id: changeTarget.id,
-                  data: {
-                    deltaAmount: parseInt(changeForm.deltaAmount),
-                    reason: changeForm.reason,
-                    effectiveDate: changeForm.effectiveDate || undefined,
-                  },
+                  data: { deltaAmount: parseInt(changeForm.deltaAmount.replace(/,/g, "")), reason: changeForm.reason, effectiveDate: changeForm.effectiveDate || undefined },
                 })}
                 disabled={!changeForm.deltaAmount || !changeForm.reason || changeMutation.isPending}
                 className="flex-1 py-2 rounded text-sm text-white font-medium"
-                style={{ background: "#1C90FB" }}
-              >
+                style={{ background: "#1C90FB" }}>
                 {changeMutation.isPending ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 삭제요청 모달 (PM 전용) */}
+      {deleteTarget && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+            <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>삭제 승인 요청</h3>
+            <p className="text-xs mb-1" style={{ color: "#888" }}>{deleteTarget.subcontractor?.name} · {deleteTarget.project?.name}</p>
+            <p className="text-xs mb-4" style={{ color: "#FC5356" }}>관리자 승인 후 삭제됩니다.</p>
+            <div>
+              <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>삭제 사유</label>
+              <textarea value={deleteForm.reason}
+                onChange={(e) => setDeleteForm((f) => ({ ...f, reason: e.target.value }))}
+                rows={3} placeholder="삭제 사유를 입력하세요 (선택)"
+                className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
+                style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
+              <button
+                onClick={() => deleteRequestMutation.mutate({
+                  targetType: "subcontract",
+                  targetId: deleteTarget.id,
+                  targetName: `${deleteTarget.subcontractor?.name} (${deleteTarget.project?.name})`,
+                  reason: deleteForm.reason,
+                })}
+                disabled={deleteRequestMutation.isPending}
+                className="flex-1 py-2 rounded text-sm text-white font-medium"
+                style={{ background: "#FC5356" }}>
+                {deleteRequestMutation.isPending ? "요청 중..." : "삭제 요청"}
               </button>
             </div>
           </div>

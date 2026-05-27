@@ -110,6 +110,25 @@ export const notifications = {
     fetchApi<any>(`/notifications/${id}/read`, { method: "PUT" }),
 };
 
+// ===== Delete Requests (삭제 승인 요청) =====
+export const deleteRequests = {
+  getAll: () => fetchApi<any[]>('/delete-requests'),
+  getPending: () => fetchApi<any[]>('/delete-requests/pending'),
+  create: (data: { targetType: string; targetId: number; targetName: string; reason?: string }) =>
+    fetchApi<any>('/delete-requests', { method: 'POST', body: JSON.stringify(data) }),
+  approve: (id: number) => fetchApi<any>(`/delete-requests/${id}/approve`, { method: 'PUT' }),
+  reject: (id: number) => fetchApi<any>(`/delete-requests/${id}/reject`, { method: 'PUT' }),
+};
+
+// ===== Project Billings (도급 기성현황) =====
+export const projectBillings = {
+  getByMonth: (month: string) => fetchApi<any[]>(`/project-billings?month=${month}`),
+  bulkUpdate: (updates: any[]) =>
+    fetchApi<any[]>('/project-billings/bulk', { method: 'POST', body: JSON.stringify({ updates }) }),
+  approve: (id: number) =>
+    fetchApi<any>(`/project-billings/${id}/approve`, { method: 'PUT' }),
+};
+
 // ===== Snapshots =====
 export const snapshots = {
   getAll: () => fetchApi<any[]>("/snapshots"),

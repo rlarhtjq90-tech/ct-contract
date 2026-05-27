@@ -15,6 +15,8 @@ export class CreateSubcontractDto {
   @IsOptional() @IsString() workScope?: string;
   @IsNumber() contractAmount: number;
   @IsOptional() @IsDateString() contractDate?: string;
+  @IsOptional() @IsDateString() startDate?: string;
+  @IsOptional() @IsDateString() endDate?: string;
 }
 
 @Injectable()
@@ -49,6 +51,8 @@ export class SubcontractsService {
       ...dto,
       currentAmount: dto.contractAmount,
       contractDate: dto.contractDate ? new Date(dto.contractDate) : new Date(),
+      startDate: dto.startDate ? new Date(dto.startDate) : undefined,
+      endDate: dto.endDate ? new Date(dto.endDate) : undefined,
     });
     const saved = await this.repo.save(sub);
 
