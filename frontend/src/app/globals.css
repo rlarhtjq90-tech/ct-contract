@@ -1,0 +1,188 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+
+/* ===== CT 디자인 시스템 토큰 (portal.ctgroup.co.kr 기준) ===== */
+:root {
+  /* 사이드바 */
+  --ct-sidebar: #333948;
+  --ct-sidebar-sub: #2D313E;
+  --ct-sidebar-line: #666A74;
+  --ct-sidebar-active: #EFF7FF;
+  --ct-sidebar-active-text: #1C90FB;
+
+  /* 주요 색상 */
+  --ct-primary: #1C90FB;
+  --ct-primary-hover: #0E7AE0;
+  --ct-primary-light: #E6F5FF;
+  --ct-danger: #FC5356;
+  --ct-danger-light: #FFF0F0;
+  --ct-warning: #F5A623;
+  --ct-success: #1DC078;
+
+  /* 컨텐츠 영역 */
+  --ct-page-bg: #F6F8FA;
+  --ct-card-bg: #FFFFFF;
+  --ct-border: #E6E6E6;
+  --ct-border-light: #F0F0F0;
+
+  /* 텍스트 */
+  --ct-text-primary: #333333;
+  --ct-text-secondary: #666666;
+  --ct-text-disabled: #AAAAAA;
+
+  /* 헤더 */
+  --ct-header-bg: #FFFFFF;
+  --ct-header-border: #E6E6E6;
+
+  /* 페이지 헤더 (전자결재 스타일) */
+  --ct-page-header-bg: #1C90FB;
+  --ct-page-header-text: #FFFFFF;
+
+  /* 카드 */
+  --ct-card-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+  --ct-card-radius: 8px;
+}
+
+/* ===== @theme: Tailwind v4 커스텀 토큰 ===== */
+@theme inline {
+  --color-ct-sidebar: var(--ct-sidebar);
+  --color-ct-sidebar-sub: var(--ct-sidebar-sub);
+  --color-ct-primary: var(--ct-primary);
+  --color-ct-danger: var(--ct-danger);
+  --color-ct-warning: var(--ct-warning);
+  --color-ct-success: var(--ct-success);
+  --color-ct-page-bg: var(--ct-page-bg);
+  --color-ct-card: var(--ct-card-bg);
+  --color-ct-border: var(--ct-border);
+  --color-ct-text: var(--ct-text-primary);
+  --color-ct-text-sub: var(--ct-text-secondary);
+  --color-ct-active: var(--ct-sidebar-active);
+  --font-sans: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* ===== 기본 스타일 ===== */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background: var(--ct-page-bg);
+  color: var(--ct-text-primary);
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== 스크롤바 커스텀 ===== */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #C8C8C8;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #AAAAAA;
+}
+
+/* ===== 유틸리티 클래스 ===== */
+.ct-card {
+  background: var(--ct-card-bg);
+  border-radius: var(--ct-card-radius);
+  box-shadow: var(--ct-card-shadow);
+  border: 1px solid var(--ct-border);
+}
+
+.ct-page-header {
+  background: var(--ct-page-header-bg);
+  color: var(--ct-page-header-text);
+  padding: 0 24px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.ct-btn-primary {
+  background: var(--ct-primary);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ct-btn-primary:hover {
+  background: var(--ct-primary-hover);
+}
+
+.ct-btn-secondary {
+  background: #fff;
+  color: var(--ct-text-primary);
+  border: 1px solid var(--ct-border);
+  border-radius: 4px;
+  padding: 7px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.ct-btn-secondary:hover {
+  border-color: var(--ct-primary);
+  color: var(--ct-primary);
+}
+
+/* ===== 테이블 공통 ===== */
+.ct-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.ct-table th {
+  background: #F7F8FA;
+  color: var(--ct-text-secondary);
+  font-weight: 500;
+  text-align: left;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ct-border);
+  white-space: nowrap;
+}
+.ct-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--ct-border-light);
+  color: var(--ct-text-primary);
+}
+.ct-table tbody tr:hover {
+  background: #F8FAFF;
+}
+
+/* ===== 뱃지 ===== */
+.ct-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 500;
+}
+.ct-badge-blue  { background: var(--ct-primary-light); color: var(--ct-primary); }
+.ct-badge-red   { background: var(--ct-danger-light); color: var(--ct-danger); }
+.ct-badge-green { background: #E8F9F2; color: var(--ct-success); }
+.ct-badge-gray  { background: #F0F0F0; color: var(--ct-text-secondary); }
+.ct-badge-orange { background: #FFF4E5; color: var(--ct-warning); }
+
+/* ===== 이상치 행 하이라이트 ===== */
+.anomaly-row td {
+  background: #FFF8F8 !important;
+}
+.anomaly-row td:first-child {
+  border-left: 3px solid var(--ct-danger);
+}

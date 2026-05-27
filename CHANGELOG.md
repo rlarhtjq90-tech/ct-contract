@@ -1,0 +1,30 @@
+# Changelog
+
+## 현재 상태
+<!-- /wrap이 매 세션 이 섹션을 업데이트합니다 -->
+- **상태:** 개발 진행 중 (Phase 2-3) — 로컬 개발 서버 동작 확인됨
+- **주요 기능:**
+  - 로그인 (JWT, 역할별 계정 3종: admin/pm/viewer)
+  - 발주처 관리 (사업자번호 중복체크, 000-00-00000 자동 포맷)
+  - 도급계약 관리 (계약일/착공일/준공일, 변경계약 모달 — admin/pm만)
+  - 하도급계약 관리 (변경계약 모달 — admin/pm만, viewer 등록 불가)
+  - 대시보드 KPI + 차트 (Recharts)
+  - RBAC: admin=전체, pm=등록·변경, viewer=조회만
+  - 프로젝트코드·계약번호 admin만 표시
+- **알려진 이슈:** 없음
+
+## 세션 로그
+<!-- ⚠️ APPEND ONLY — 아래 항목을 절대 삭제/수정하지 마세요. 새 항목은 이 줄 바로 아래에 추가합니다. -->
+
+### 2026-05-27
+- 하도급계약 페이지에 변경계약 버튼/모달 추가 (admin·pm 전용, viewer 등록 버튼도 숨김)
+- 백엔드 `subcontracts.addChange`에 `effectiveDate` 파라미터 추가 (controller + service)
+- `api.ts` `subcontracts.addChange` 타입에 `effectiveDate?: string` 추가
+
+### 2026-05-26
+- 도급계약: 계약일 컬럼/모달 추가, 시작일→착공일·종료일→준공일 명칭 변경, 변경계약 버튼(admin·pm)
+- 하도급계약: 계약번호 admin만 표시, 계약금액 콤마 자동 포맷
+- 발주처: 사업자번호 000-00-00000 자동 포맷, 10자리 필수, 중복체크 버튼
+- 로그인 화면: pm·viewer 계정 빠른 입력 버튼 표시 (admin 제외)
+- backend: pm·viewer 테스트 계정 자동 생성 (onModuleInit)
+- RBAC: useIsAdmin·useCanEdit 훅, 프로젝트코드·계약번호 admin만 표시
