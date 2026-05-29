@@ -4,9 +4,9 @@ import { useState, useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { subcontracts, projects as projectsApi, subcontractors as subcontractorsApi, deleteRequests as deleteRequestsApi } from "@/lib/api";
 import { PageHeader } from "@/components/layout/page-header";
-import { Plus, Search, FileText, GitBranch, Trash2, Check, X } from "lucide-react";
+import { Plus, Search, FileText, GitBranch, Trash2, Check, X, Pencil } from "lucide-react";
 import { fmtNum } from "@/lib/format";
-import { useIsAdmin, useCanEdit, useUser } from "@/lib/auth";
+import { useIsAdmin, useCanEdit } from "@/lib/auth";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "진행중", completed: "완료", suspended: "일시중단", cancelled: "취소",
@@ -21,26 +21,24 @@ const EMPTY_FORM = {
   startDate: "", endDate: "",
 };
 const EMPTY_CHANGE = { deltaAmount: "", reason: "", effectiveDate: "" };
-const EMPTY_DELETE = { reason: "" };
+const EMPTY_EDIT = { contractNo: "", workScope: "", contractDate: "", startDate: "", endDate: "" };
 
 export default function SubcontractsPage() {
   const queryClient = useQueryClient();
-  const user = useUser();
   const isAdmin = useIsAdmin();
   const canEdit = useCanEdit();
-  const isPm = user?.role === "pm";
 
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
 
+  // 수정 모달
+  const [editTarget, setEditTarget] = useState<any>(null);
+  const [editForm, setEditForm] = useState(EMPTY_EDIT);
+
   // 변경계약 모달
   const [changeTarget, setChangeTarget] = useState<any>(null);
   const [changeForm, setChangeForm] = useState(EMPTY_CHANGE);
-
-  // 삭제요청 모달
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
-  const [deleteForm, setDeleteForm] = useState(EMPTY_DELETE);
 
   const { data: subs = [], isLoading } = useQuery({ queryKey: ["subcontracts"], queryFn: () => subcontracts.getAll() });
   const { data: projectsList = [] } = useQuery({ queryKey: ["projects"], queryFn: projectsApi.getAll });
@@ -66,21 +64,28 @@ export default function SubcontractsPage() {
     },
   });
 
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: number; data: typeof EMPTY_EDIT }) =>
+      subcontracts.update(id, {
+        contractNo: data.contractNo || undefined,
+        workScope: data.workScope || undefined,
+        contractDate: data.contractDate || undefined,
+        startDate: data.startDate || undefined,
+        endDate: data.endDate || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["subcontracts"] });
+      setEditTarget(null);
+      setEditForm(EMPTY_EDIT);
+    },
+  });
+
   const changeMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: any }) => subcontracts.addChange(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subcontracts"] });
       setChangeTarget(null);
       setChangeForm(EMPTY_CHANGE);
-    },
-  });
-
-  const deleteRequestMutation = useMutation({
-    mutationFn: deleteRequestsApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["delete-requests"] });
-      setDeleteTarget(null);
-      setDeleteForm(EMPTY_DELETE);
     },
   });
 
@@ -184,9 +189,9 @@ export default function SubcontractsPage() {
 
                           {/* Admin: 요청확인란 */}
                           {isAdmin && pendingReq && (
-                            <div className="rounded-lg px-2 py-2 text-left w-full"
-                              style={{ background: "#FFF0F0", border: "1px solid #FFCCCC", minWidth: 130 }}>
-                              <div className="text-xs font-semibold mb-1" style={{ color: "#FC5356" }}>
+                            <div className="rounded-lg px-2 py-1.5 text-left w-full"
+                              style={{ border: "1px solid #E6E6E6", minWidth: 120 }}>
+                              <div className="text-xs font-medium mb-1.5" style={{ color: "#FC5356" }}>
                                 ⚠ 삭제 요청
                               </div>
                               {pendingReq.reason && (
@@ -197,51 +202,48 @@ export default function SubcontractsPage() {
                               <div className="flex gap-1">
                                 <button onClick={() => approveMutation.mutate(pendingReq.id)}
                                   disabled={approveMutation.isPending}
-                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium"
-                                  style={{ background: "#F0FFF4", color: "#27AE60", border: "1px solid #A8E6BE" }}>
+                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                                  style={{ color: "#27AE60" }}>
                                   <Check size={10} />승인
                                 </button>
                                 <button onClick={() => rejectMutation.mutate(pendingReq.id)}
                                   disabled={rejectMutation.isPending}
-                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium"
-                                  style={{ background: "#FFF8F8", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                                  style={{ color: "#FC5356" }}>
                                   <X size={10} />거절
                                 </button>
                               </div>
                             </div>
                           )}
 
-                          {/* PM: 삭제 대기 중 표시 */}
-                          {isPm && pendingReq && (
-                            <span className="text-xs px-2 py-0.5 rounded-full"
-                              style={{ background: "#FFF3E0", color: "#E67E22", border: "1px solid #FFD9A0" }}>
-                              ⏳ 삭제 대기중
-                            </span>
-                          )}
-
-                          {/* 버튼 그룹: 변경 + 삭제(admin) / 삭제요청(pm) */}
-                          <div className="flex items-center justify-center gap-1">
+                          {/* 버튼 그룹: 수정 + 변경 + 삭제 */}
+                          <div className="flex items-center justify-center gap-1 flex-wrap">
+                            <button onClick={() => {
+                              setEditTarget(s);
+                              setEditForm({
+                                contractNo: s.contractNo || "",
+                                workScope: s.workScope || "",
+                                contractDate: s.contractDate ? new Date(s.contractDate).toISOString().slice(0, 10) : "",
+                                startDate: s.startDate ? new Date(s.startDate).toISOString().slice(0, 10) : "",
+                                endDate: s.endDate ? new Date(s.endDate).toISOString().slice(0, 10) : "",
+                              });
+                            }}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: "#7C3AED" }}>
+                              <Pencil size={11} />수정
+                            </button>
                             <button onClick={() => { setChangeTarget(s); setChangeForm(EMPTY_CHANGE); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                              style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}>
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: "#1C90FB" }}>
                               <GitBranch size={11} />변경
                             </button>
-                            {isAdmin && (
-                              <button
-                                onClick={() => { if (confirm(`"${s.subcontractor?.name}" 하도급계약을 삭제하시겠습니까?`)) deleteMutation.mutate(s.id); }}
-                                disabled={deleteMutation.isPending}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
-                                <Trash2 size={11} />삭제
-                              </button>
-                            )}
-                            {isPm && !pendingReq && (
-                              <button onClick={() => { setDeleteTarget(s); setDeleteForm(EMPTY_DELETE); }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
-                                <Trash2 size={11} />삭제요청
-                              </button>
-                            )}
+                            <button
+                              onClick={() => { if (confirm(`"${s.subcontractor?.name}" 하도급계약을 삭제하시겠습니까?`)) deleteMutation.mutate(s.id); }}
+                              disabled={deleteMutation.isPending}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: "#FC5356" }}>
+                              <Trash2 size={11} />삭제
+                            </button>
                           </div>
 
                         </div>
@@ -333,6 +335,82 @@ export default function SubcontractsPage() {
         </div>
       )}
 
+      {/* ── 수정 모달 ── */}
+      {editTarget && (
+        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
+          <div className="bg-white rounded-xl p-6 w-full max-w-md" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)", maxHeight: "90vh", overflowY: "auto" }}>
+            <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>하도급계약 수정</h3>
+            <p className="text-xs mb-4" style={{ color: "#888" }}>
+              {editTarget.subcontractor?.name} · {editTarget.project?.name}
+            </p>
+            <div className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약번호</label>
+                <input
+                  value={editForm.contractNo}
+                  onChange={(e) => setEditForm((f) => ({ ...f, contractNo: e.target.value }))}
+                  className="w-full px-3 py-2 rounded text-sm outline-none"
+                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>공사 범위</label>
+                <textarea
+                  value={editForm.workScope}
+                  onChange={(e) => setEditForm((f) => ({ ...f, workScope: e.target.value }))}
+                  rows={2}
+                  className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
+                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
+                />
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약일</label>
+                  <input
+                    type="date"
+                    value={editForm.contractDate}
+                    onChange={(e) => setEditForm((f) => ({ ...f, contractDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded text-sm outline-none"
+                    style={{ border: "1px solid #E6E6E6", color: "#333" }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>착공일</label>
+                  <input
+                    type="date"
+                    value={editForm.startDate}
+                    onChange={(e) => setEditForm((f) => ({ ...f, startDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded text-sm outline-none"
+                    style={{ border: "1px solid #E6E6E6", color: "#333" }}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>준공일</label>
+                  <input
+                    type="date"
+                    value={editForm.endDate}
+                    onChange={(e) => setEditForm((f) => ({ ...f, endDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded text-sm outline-none"
+                    style={{ border: "1px solid #E6E6E6", color: "#333" }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-5">
+              <button onClick={() => setEditTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
+              <button
+                onClick={() => updateMutation.mutate({ id: editTarget.id, data: editForm })}
+                disabled={updateMutation.isPending}
+                className="flex-1 py-2 rounded text-sm text-white font-medium"
+                style={{ background: "#7C3AED" }}
+              >
+                {updateMutation.isPending ? "저장 중..." : "저장"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 변경계약 모달 */}
       {changeTarget && (
         <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
@@ -382,39 +460,6 @@ export default function SubcontractsPage() {
         </div>
       )}
 
-      {/* 삭제요청 모달 (PM 전용) */}
-      {deleteTarget && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-            <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>삭제 승인 요청</h3>
-            <p className="text-xs mb-1" style={{ color: "#888" }}>{deleteTarget.subcontractor?.name} · {deleteTarget.project?.name}</p>
-            <p className="text-xs mb-4" style={{ color: "#FC5356" }}>관리자 승인 후 삭제됩니다.</p>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>삭제 사유</label>
-              <textarea value={deleteForm.reason}
-                onChange={(e) => setDeleteForm((f) => ({ ...f, reason: e.target.value }))}
-                rows={3} placeholder="삭제 사유를 입력하세요 (선택)"
-                className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
-                style={{ border: "1px solid #E6E6E6", color: "#333" }} />
-            </div>
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
-              <button
-                onClick={() => deleteRequestMutation.mutate({
-                  targetType: "subcontract",
-                  targetId: deleteTarget.id,
-                  targetName: `${deleteTarget.subcontractor?.name} (${deleteTarget.project?.name})`,
-                  reason: deleteForm.reason,
-                })}
-                disabled={deleteRequestMutation.isPending}
-                className="flex-1 py-2 rounded text-sm text-white font-medium"
-                style={{ background: "#FC5356" }}>
-                {deleteRequestMutation.isPending ? "요청 중..." : "삭제 요청"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

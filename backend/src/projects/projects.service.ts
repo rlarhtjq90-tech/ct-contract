@@ -5,6 +5,10 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Project } from '../entities/project.entity';
 import { ProjectMetric } from '../entities/project-metric.entity';
 import { ContractChange, ChangeTargetType } from '../entities/contract-change.entity';
+import { ProjectBilling } from '../entities/project-billing.entity';
+import { DeleteRequest } from '../entities/delete-request.entity';
+import { Subcontract } from '../entities/subcontract.entity';
+import { MonthlyBilling } from '../entities/monthly-billing.entity';
 import { IsString, IsOptional, IsNumber, IsDateString } from 'class-validator';
 
 export class CreateProjectDto {
@@ -30,6 +34,10 @@ export class ProjectsService {
     @InjectRepository(Project) private repo: Repository<Project>,
     @InjectRepository(ProjectMetric) private metricRepo: Repository<ProjectMetric>,
     @InjectRepository(ContractChange) private changeRepo: Repository<ContractChange>,
+    @InjectRepository(ProjectBilling) private billingRepo: Repository<ProjectBilling>,
+    @InjectRepository(DeleteRequest) private deleteRequestRepo: Repository<DeleteRequest>,
+    @InjectRepository(Subcontract) private subcontractRepo: Repository<Subcontract>,
+    @InjectRepository(MonthlyBilling) private monthlyBillingRepo: Repository<MonthlyBilling>,
     private eventEmitter: EventEmitter2,
   ) {}
 
@@ -95,6 +103,33 @@ export class ProjectsService {
   }
 
   async remove(id: number) {
+    // 1. 하도급계약과 그 연관 데이터 cascade 삭제
+    const subcontracts = await this.subcontractRepo.find({
+      where: { projectId: id },
+      select: { id: true },
+    });
+    if (subcontracts.length > 0) {
+      const subIds = subcontracts.map((s) => s.id);
+      await this.monthlyBillingRepo                            // 하도급 기성현황
+        .createQueryBuilder().delete()
+        .where('subcontract_id IN (:...ids)', { ids: subIds })
+        .execute();
+      await this.changeRepo                                    // 하도급 계약변경 이력
+        .createQueryBuilder().delete()
+        .where('target_type = :type AND target_id IN (:...ids)', { type: ChangeTargetType.SUBCONTRACT, ids: subIds })
+        .execute();
+      await this.deleteRequestRepo                             // 하도급 삭제요청 이력
+        .createQueryBuilder().delete()
+        .where('target_type = :type AND target_id IN (:...ids)', { type: 'subcontract', ids: subIds })
+        .execute();
+      await this.subcontractRepo.delete(subIds);               // 하도급계약
+    }
+
+    // 2. 도급계약 연관 데이터 삭제
+    await this.billingRepo.delete({ projectId: id });           // 도급 기성현황
+    await this.metricRepo.delete({ projectId: id });            // 집계 메트릭
+    await this.changeRepo.delete({ targetType: ChangeTargetType.PROJECT, targetId: id }); // 계약변경 이력
+    await this.deleteRequestRepo.delete({ targetType: 'project', targetId: id });         // 삭제요청 이력
     await this.repo.delete(id);
     return { success: true };
   }

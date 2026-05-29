@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Param, Body, Query, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, Query, ParseIntPipe, UseGuards, Request } from '@nestjs/common';
 import { BillingsService } from './billings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -25,5 +25,10 @@ export class BillingsController {
   @Get('export')
   export(@Query('month') month: string) {
     return this.service.exportData(month || new Date().toISOString().slice(0, 7));
+  }
+
+  @Delete('orphans')
+  deleteOrphans() {
+    return this.service.deleteOrphans();
   }
 }

@@ -58,6 +58,8 @@ export const clients = {
     fetchApi<any>("/clients", { method: "POST", body: JSON.stringify(data) }),
   update: (id: number, data: any) =>
     fetchApi<any>(`/clients/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: number) =>
+    fetchApi<any>(`/clients/${id}`, { method: "DELETE" }),
 };
 
 // ===== Projects (도급계약) =====
@@ -80,6 +82,10 @@ export const subcontractors = {
   getOne: (id: number) => fetchApi<any>(`/subcontractors/${id}`),
   create: (data: any) =>
     fetchApi<any>("/subcontractors", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: any) =>
+    fetchApi<any>(`/subcontractors/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  remove: (id: number) =>
+    fetchApi<any>(`/subcontractors/${id}`, { method: "DELETE" }),
 };
 
 // ===== Subcontracts (하도급계약) =====
@@ -89,6 +95,8 @@ export const subcontracts = {
   getOne: (id: number) => fetchApi<any>(`/subcontracts/${id}`),
   create: (data: any) =>
     fetchApi<any>("/subcontracts", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: { contractNo?: string; workScope?: string; contractDate?: string; startDate?: string; endDate?: string }) =>
+    fetchApi<any>(`/subcontracts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   addChange: (id: number, data: { deltaAmount: number; reason: string; effectiveDate?: string }) =>
     fetchApi<any>(`/subcontracts/${id}/changes`, { method: "POST", body: JSON.stringify(data) }),
   getChanges: (id: number) => fetchApi<any[]>(`/subcontracts/${id}/changes`),

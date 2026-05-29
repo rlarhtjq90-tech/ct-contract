@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Param, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, ParseIntPipe, UseGuards } from '@nestjs/common';
 import { SubcontractorsService, CreateSubcontractorDto } from './subcontractors.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -13,4 +13,5 @@ export class SubcontractorsController {
   @Put(':id') update(@Param('id', ParseIntPipe) id: number, @Body() dto: Partial<CreateSubcontractorDto>) {
     return this.service.update(id, dto);
   }
+  @Delete(':id') remove(@Param('id', ParseIntPipe) id: number) { return this.service.remove(id); }
 }

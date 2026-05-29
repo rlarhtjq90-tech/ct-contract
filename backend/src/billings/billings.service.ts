@@ -34,11 +34,27 @@ export class BillingsService {
       }
     }
 
-    return this.repo.find({
+    const billings = await this.repo.find({
       where: { billingMonth: month },
       relations: { subcontract: { subcontractor: true, project: true } },
       order: { subcontractId: 'ASC' },
     });
+
+    // 모든 행(approved 포함)의 cumulativeAmount를 이전 승인 합계 기반으로 실시간 보정
+    // → 역순 승인(3월 먼저 approve 후 2월 approve 등)에도 전회금액이 항상 정확하게 표시됨
+    for (const billing of billings) {
+      const prevResult = await this.repo
+        .createQueryBuilder('b')
+        .where('b.subcontract_id = :sid', { sid: billing.subcontractId })
+        .andWhere('b.billing_month < :month', { month })
+        .andWhere('b.status = :status', { status: BillingStatus.APPROVED })
+        .select('SUM(b.actual_amount)', 'total')
+        .getRawOne();
+      const prevTotal = Number(prevResult?.total || 0);
+      billing.cumulativeAmount = prevTotal + Number(billing.actualAmount);
+    }
+
+    return billings;
   }
 
   async bulkUpdate(updates: Array<{ id: number; plannedAmount?: number; actualAmount?: number; memo?: string }>) {
@@ -108,6 +124,13 @@ export class BillingsService {
       approvedBy,
     });
 
+    // 이후 달 approved 레코드 cumulativeAmount·progressRate DB 재계산
+    await this.recalcFutureBillings(
+      billing.subcontractId,
+      billing.billingMonth,
+      Number(billing.subcontract?.currentAmount || 0),
+    );
+
     this.eventEmitter.emit('billing.approved', {
       billingId: id,
       subcontractId: billing.subcontractId,
@@ -121,6 +144,57 @@ export class BillingsService {
   async exportData(month: string) {
     const billingList = await this.findByMonth(month);
     return billingList.filter((b) => b.status === BillingStatus.APPROVED);
+  }
+
+  async deleteOrphans(): Promise<{ deleted: number }> {
+    const subcontracts = await this.subRepo.find({ select: { id: true } });
+    const existingIds = subcontracts.map((s) => s.id);
+    if (existingIds.length === 0) {
+      const all = await this.repo.find({ select: { id: true } });
+      if (all.length === 0) return { deleted: 0 };
+      await this.repo.delete(all.map((b) => b.id));
+      return { deleted: all.length };
+    }
+    const orphans = await this.repo
+      .createQueryBuilder('b')
+      .where('b.subcontract_id NOT IN (:...ids)', { ids: existingIds })
+      .select('b.id')
+      .getMany();
+    if (orphans.length === 0) return { deleted: 0 };
+    await this.repo.delete(orphans.map((b) => b.id));
+    return { deleted: orphans.length };
+  }
+
+  private async recalcFutureBillings(
+    subcontractId: number,
+    fromMonth: string,
+    contractAmount: number,
+  ) {
+    const futureBillings = await this.repo.find({
+      where: { subcontractId, status: BillingStatus.APPROVED },
+      order: { billingMonth: 'ASC' },
+    });
+
+    for (const b of futureBillings) {
+      if (b.billingMonth <= fromMonth) continue;
+
+      const prevResult = await this.repo
+        .createQueryBuilder('b')
+        .where('b.subcontract_id = :sid', { sid: b.subcontractId })
+        .andWhere('b.billing_month < :month', { month: b.billingMonth })
+        .andWhere('b.status = :status', { status: BillingStatus.APPROVED })
+        .select('SUM(b.actual_amount)', 'total')
+        .getRawOne();
+
+      const prevTotal = Number(prevResult?.total || 0);
+      const newCumulative = prevTotal + Number(b.actualAmount);
+      const progressRate = contractAmount > 0 ? (newCumulative / contractAmount) * 100 : 0;
+
+      await this.repo.update(b.id, {
+        cumulativeAmount: newCumulative,
+        progressRate: Math.min(progressRate, 999.99),
+      });
+    }
   }
 
   private async getPrevMonthBilling(subcontractId: number, currentMonth: string) {

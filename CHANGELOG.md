@@ -2,22 +2,29 @@
 
 ## 현재 상태
 <!-- /wrap이 매 세션 이 섹션을 업데이트합니다 -->
-- **상태:** 개발 진행 중 (Phase 3) — 기성현황 입력·승인 + 삭제요청 플로우 완성
+- **상태:** 개발 진행 중 (Phase 3) — RBAC 단순화 + UI 정리 완료
 - **주요 기능:**
   - 로그인 (JWT, admin/pm/viewer — 공통 비밀번호 `ct1234!`)
   - 사이드바 아코디언: 도급계약(발주처·기성현황) / 하도급계약(하도급사·기성현황)
   - 발주처 관리 `/clients`
   - 하도급사 관리 `/subcontractors`
-  - 도급계약 관리 `/projects` + 변경계약 + Admin 직접 삭제 + PM 삭제요청 플로우
-  - 하도급계약 관리 `/subcontracts` + 변경계약 + Admin 직접 삭제 + PM 삭제요청 플로우
+  - 도급계약 관리 `/projects` + 변경계약 + canEdit(admin·pm) 직접 삭제
+  - 하도급계약 관리 `/subcontracts` + 변경계약 + canEdit(admin·pm) 직접 삭제
   - 도급 기성현황 `/project-billings` (발주처 기성 월별 콤마 입력·승인, 계약 자동 연동)
   - 하도급 기성현황 `/billings` (하도급사 기성 월별 콤마 입력·승인, 계약 자동 연동)
   - 대시보드 KPI + 차트 (Recharts)
-  - RBAC: admin=직접삭제, pm=등록·변경·삭제요청, viewer=조회만
+  - RBAC: admin=모든권한, pm=등록·변경·직접삭제, viewer=조회만 (삭제요청 플로우 제거)
+  - 비고 컬럼 헤더 통일 (4개 페이지 모두 "비고") + ghost 버튼 스타일
 - **알려진 이슈:** 없음
 
 ## 세션 로그
 <!-- ⚠️ APPEND ONLY — 아래 항목을 절대 삭제/수정하지 마세요. 새 항목은 이 줄 바로 아래에 추가합니다. -->
+
+### 2026-05-29
+- PM 삭제요청 플로우 제거: projects·subcontracts에서 canEdit(admin+pm) 모두 직접 삭제로 통일
+- 4개 대시보드 비고 헤더 통일: clients·subcontractors의 "관리" → "비고"
+- 전체 버튼 ghost 스타일 적용: 배경·테두리 제거, 텍스트 색상 유지, hover #F5F5F5
+- Admin 삭제요청 승인·거절 패널 리디자인: 빨간 배경 → 연한 테두리(#E6E6E6)만 남김
 
 ### 2026-05-27 (3차)
 - 기성금액 입력 콤마 포맷 (focusedId + e.target.select()), 당월 계획액 제거, 기성금액 명칭 변경

@@ -117,14 +117,15 @@ export default function ProjectBillingsPage() {
         {/* 기성 그리드 */}
         <div className="ct-card overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="ct-table" style={{ minWidth: "900px" }}>
+            <table className="ct-table" style={{ minWidth: "1000px" }}>
               <thead>
                 <tr>
                   <th style={{ minWidth: "120px" }}>발주처</th>
                   <th style={{ minWidth: "160px" }}>도급계약명</th>
                   <th className="text-right" style={{ minWidth: "110px" }}>계약금액</th>
-                  <th className="text-right" style={{ minWidth: "110px" }}>기성금액</th>
-                  <th className="text-right" style={{ minWidth: "100px" }}>누적액</th>
+                  <th className="text-right" style={{ minWidth: "90px" }}>전회금액</th>
+                  <th className="text-right" style={{ minWidth: "110px" }}>당월금액</th>
+                  <th className="text-right" style={{ minWidth: "90px" }}>누적금액</th>
                   <th style={{ minWidth: "110px" }}>기성률</th>
                   <th style={{ minWidth: "80px" }}>상태</th>
                   <th style={{ minWidth: "70px" }}>승인</th>
@@ -133,13 +134,13 @@ export default function ProjectBillingsPage() {
               <tbody>
                 {isLoading ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-10" style={{ color: "#AAA" }}>
+                    <td colSpan={9} className="text-center py-10" style={{ color: "#AAA" }}>
                       불러오는 중...
                     </td>
                   </tr>
                 ) : (billingList as any[]).length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="text-center py-12">
+                    <td colSpan={9} className="text-center py-12">
                       <div style={{ color: "#AAA", fontSize: 13 }}>
                         {month} 도급 기성 데이터가 없습니다.
                         <br />도급계약을 먼저 등록하세요.
@@ -149,9 +150,12 @@ export default function ProjectBillingsPage() {
                 ) : (
                   (billingList as any[]).map((b: any) => {
                     const edit = edits[b.id] || {};
-                    const actualVal = edit.actualAmount ?? Number(b.actualAmount);
                     const isEdited = b.id in edits;
                     const contractAmt = Number(b.project?.currentAmount || 0);
+                    const editedAmt = edit.actualAmount ?? Number(b.actualAmount);           // 당월금액
+                    const prevCumul = Number(b.cumulativeAmount) - Number(b.actualAmount);  // 전회금액
+                    const newCumul  = prevCumul + editedAmt;                                // 누적금액 (실시간)
+                    const liveRate  = contractAmt > 0 ? (newCumul / contractAmt) * 100 : 0; // 기성률 (실시간)
 
                     return (
                       <tr
@@ -179,10 +183,15 @@ export default function ProjectBillingsPage() {
                         <td className="text-right text-sm" style={{ color: "#333" }}>
                           {fmtNum(contractAmt)}
                         </td>
+                        {/* 전회금액 */}
+                        <td className="text-right text-sm" style={{ color: "#999" }}>
+                          {fmtNum(prevCumul)}
+                        </td>
+                        {/* 당월금액 */}
                         <td className="text-right">
                           {b.status === "approved" ? (
                             <span className="text-sm font-medium" style={{ color: "#333" }}>
-                              {fmtNum(actualVal)}
+                              {fmtNum(editedAmt)}
                             </span>
                           ) : (
                             <input
@@ -190,8 +199,8 @@ export default function ProjectBillingsPage() {
                               inputMode="numeric"
                               value={
                                 focusedId === b.id
-                                  ? (actualVal || "")
-                                  : (actualVal ? fmtNum(actualVal) : "")
+                                  ? (editedAmt || "")
+                                  : (editedAmt ? fmtNum(editedAmt) : "")
                               }
                               onFocus={(e) => { setFocusedId(b.id); e.target.select(); }}
                               onBlur={() => setFocusedId(null)}
@@ -210,8 +219,9 @@ export default function ProjectBillingsPage() {
                             />
                           )}
                         </td>
+                        {/* 누적금액 (실시간) */}
                         <td className="text-right text-sm" style={{ color: "#333" }}>
-                          {fmtNum(Number(b.cumulativeAmount))}
+                          {fmtNum(newCumul)}
                         </td>
                         <td>
                           <div className="flex items-center gap-2">
@@ -219,13 +229,13 @@ export default function ProjectBillingsPage() {
                               <div
                                 className="h-1.5 rounded-full"
                                 style={{
-                                  background: Number(b.progressRate) > 100 ? "#FC5356" : "#1C90FB",
-                                  width: `${Math.min(Number(b.progressRate), 100)}%`,
+                                  background: liveRate > 100 ? "#FC5356" : "#1C90FB",
+                                  width: `${Math.min(liveRate, 100)}%`,
                                 }}
                               />
                             </div>
                             <span className="text-xs font-medium" style={{ color: "#333", minWidth: 36 }}>
-                              {Number(b.progressRate).toFixed(1)}%
+                              {liveRate.toFixed(1)}%
                             </span>
                           </div>
                         </td>

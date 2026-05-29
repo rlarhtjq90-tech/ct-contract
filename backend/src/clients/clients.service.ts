@@ -2,6 +2,8 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Client } from '../entities/client.entity';
+import { Project } from '../entities/project.entity';
+import { ProjectsService } from '../projects/projects.service';
 import { IsString, IsOptional } from 'class-validator';
 
 export class CreateClientDto {
@@ -17,6 +19,8 @@ export class CreateClientDto {
 export class ClientsService {
   constructor(
     @InjectRepository(Client) private repo: Repository<Client>,
+    @InjectRepository(Project) private projectRepo: Repository<Project>,
+    private projectsService: ProjectsService,
   ) {}
 
   findAll() {
@@ -43,6 +47,16 @@ export class ClientsService {
   }
 
   async remove(id: number) {
+    // 이 발주처에 속한 도급계약을 순서대로 cascade 삭제
+    // (projects.service.ts의 remove()가 하도급계약·기성현황까지 처리)
+    const projects = await this.projectRepo.find({
+      where: { clientId: id },
+      select: { id: true },
+    });
+    for (const project of projects) {
+      await this.projectsService.remove(project.id);
+    }
     await this.repo.delete(id);
+    return { success: true };
   }
 }

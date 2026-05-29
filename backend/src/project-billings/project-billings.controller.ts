@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, Req, UseGuards } from '@nestjs/common';
 import { ProjectBillingsService } from './project-billings.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 
@@ -21,5 +21,10 @@ export class ProjectBillingsController {
   @Put(':id/approve')
   approve(@Param('id') id: string, @Req() req: any) {
     return this.service.approve(Number(id), req.user?.name || 'admin');
+  }
+
+  @Delete('orphans')
+  deleteOrphans() {
+    return this.service.deleteOrphans();
   }
 }

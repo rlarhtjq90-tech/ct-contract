@@ -6,7 +6,7 @@ import { projects, clients as clientsApi, deleteRequests as deleteRequestsApi } 
 import { PageHeader } from "@/components/layout/page-header";
 import { Plus, Search, FolderOpen, GitBranch, Trash2, Check, X } from "lucide-react";
 import { fmtMoney } from "@/lib/format";
-import { useIsAdmin, useCanEdit, useUser } from "@/lib/auth";
+import { useIsAdmin, useCanEdit } from "@/lib/auth";
 
 const STATUS_LABELS: Record<string, string> = {
   active: "진행중", completed: "완료", suspended: "일시중단", cancelled: "취소",
@@ -20,14 +20,11 @@ const EMPTY_FORM = {
   contractDate: "", startDate: "", endDate: "", description: "",
 };
 const EMPTY_CHANGE = { deltaAmount: "", reason: "", effectiveDate: "" };
-const EMPTY_DELETE = { reason: "" };
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
-  const user = useUser();
   const isAdmin = useIsAdmin();
   const canEdit = useCanEdit();
-  const isPm = user?.role === "pm";
 
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
@@ -36,10 +33,6 @@ export default function ProjectsPage() {
   // 변경계약 모달
   const [changeTarget, setChangeTarget] = useState<any>(null);
   const [changeForm, setChangeForm] = useState(EMPTY_CHANGE);
-
-  // 삭제요청 모달
-  const [deleteTarget, setDeleteTarget] = useState<any>(null);
-  const [deleteForm, setDeleteForm] = useState(EMPTY_DELETE);
 
   const { data = [], isLoading } = useQuery({ queryKey: ["projects"], queryFn: projects.getAll });
   const { data: clientsList = [] } = useQuery({ queryKey: ["clients"], queryFn: clientsApi.getAll });
@@ -69,15 +62,6 @@ export default function ProjectsPage() {
       queryClient.invalidateQueries({ queryKey: ["projects"] });
       setChangeTarget(null);
       setChangeForm(EMPTY_CHANGE);
-    },
-  });
-
-  const deleteRequestMutation = useMutation({
-    mutationFn: deleteRequestsApi.create,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["delete-requests"] });
-      setDeleteTarget(null);
-      setDeleteForm(EMPTY_DELETE);
     },
   });
 
@@ -180,9 +164,9 @@ export default function ProjectsPage() {
 
                           {/* Admin: 요청확인란 */}
                           {isAdmin && pendingReq && (
-                            <div className="rounded-lg px-2 py-2 text-left w-full"
-                              style={{ background: "#FFF0F0", border: "1px solid #FFCCCC", minWidth: 130 }}>
-                              <div className="text-xs font-semibold mb-1" style={{ color: "#FC5356" }}>
+                            <div className="rounded-lg px-2 py-1.5 text-left w-full"
+                              style={{ border: "1px solid #E6E6E6", minWidth: 120 }}>
+                              <div className="text-xs font-medium mb-1.5" style={{ color: "#FC5356" }}>
                                 ⚠ 삭제 요청
                               </div>
                               {pendingReq.reason && (
@@ -193,51 +177,34 @@ export default function ProjectsPage() {
                               <div className="flex gap-1">
                                 <button onClick={() => approveMutation.mutate(pendingReq.id)}
                                   disabled={approveMutation.isPending}
-                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium"
-                                  style={{ background: "#F0FFF4", color: "#27AE60", border: "1px solid #A8E6BE" }}>
+                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                                  style={{ color: "#27AE60" }}>
                                   <Check size={10} />승인
                                 </button>
                                 <button onClick={() => rejectMutation.mutate(pendingReq.id)}
                                   disabled={rejectMutation.isPending}
-                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium"
-                                  style={{ background: "#FFF8F8", color: "#FC5356", border: "1px solid #FFCCCC" }}>
+                                  className="flex-1 inline-flex items-center justify-center gap-0.5 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                                  style={{ color: "#FC5356" }}>
                                   <X size={10} />거절
                                 </button>
                               </div>
                             </div>
                           )}
 
-                          {/* PM: 삭제 대기 중 표시 */}
-                          {isPm && pendingReq && (
-                            <span className="text-xs px-2 py-0.5 rounded-full"
-                              style={{ background: "#FFF3E0", color: "#E67E22", border: "1px solid #FFD9A0" }}>
-                              ⏳ 삭제 대기중
-                            </span>
-                          )}
-
-                          {/* 버튼 그룹: 변경 + 삭제(admin) / 삭제요청(pm) */}
+                          {/* 버튼 그룹: 변경 + 삭제 */}
                           <div className="flex items-center justify-center gap-1">
                             <button onClick={() => { setChangeTarget(p); setChangeForm(EMPTY_CHANGE); }}
-                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                              style={{ background: "#F0F7FF", color: "#1C90FB", border: "1px solid #C8E4FF" }}>
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: "#1C90FB" }}>
                               <GitBranch size={11} />변경
                             </button>
-                            {isAdmin && (
-                              <button
-                                onClick={() => { if (confirm(`"${p.name}" 을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(p.id); }}
-                                disabled={deleteMutation.isPending}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
-                                <Trash2 size={11} />삭제
-                              </button>
-                            )}
-                            {isPm && !pendingReq && (
-                              <button onClick={() => { setDeleteTarget(p); setDeleteForm(EMPTY_DELETE); }}
-                                className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium"
-                                style={{ background: "#FFF0F0", color: "#FC5356", border: "1px solid #FFCCCC" }}>
-                                <Trash2 size={11} />삭제요청
-                              </button>
-                            )}
+                            <button
+                              onClick={() => { if (confirm(`"${p.name}" 을(를) 삭제하시겠습니까?`)) deleteMutation.mutate(p.id); }}
+                              disabled={deleteMutation.isPending}
+                              className="inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: "#FC5356" }}>
+                              <Trash2 size={11} />삭제
+                            </button>
                           </div>
 
                         </div>
@@ -376,39 +343,6 @@ export default function ProjectsPage() {
         </div>
       )}
 
-      {/* 삭제요청 모달 (PM 전용) */}
-      {deleteTarget && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-            <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>삭제 승인 요청</h3>
-            <p className="text-xs mb-1" style={{ color: "#888" }}>{deleteTarget.name}</p>
-            <p className="text-xs mb-4" style={{ color: "#FC5356" }}>관리자 승인 후 삭제됩니다.</p>
-            <div>
-              <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>삭제 사유</label>
-              <textarea value={deleteForm.reason}
-                onChange={(e) => setDeleteForm((f) => ({ ...f, reason: e.target.value }))}
-                rows={3} placeholder="삭제 사유를 입력하세요 (선택)"
-                className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
-                style={{ border: "1px solid #E6E6E6", color: "#333" }} />
-            </div>
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => setDeleteTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
-              <button
-                onClick={() => deleteRequestMutation.mutate({
-                  targetType: "project",
-                  targetId: deleteTarget.id,
-                  targetName: deleteTarget.name,
-                  reason: deleteForm.reason,
-                })}
-                disabled={deleteRequestMutation.isPending}
-                className="flex-1 py-2 rounded text-sm text-white font-medium"
-                style={{ background: "#FC5356" }}>
-                {deleteRequestMutation.isPending ? "요청 중..." : "삭제 요청"}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
