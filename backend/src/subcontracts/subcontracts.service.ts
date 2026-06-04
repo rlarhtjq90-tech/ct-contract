@@ -95,8 +95,10 @@ export class SubcontractsService {
     return this.findOne(id);
   }
 
-  async addChange(id: number, deltaAmount: number, reason: string, createdBy: string, effectiveDate?: string) {
-    const sub = await this.findOne(id);
+  async addChange(id: number, afterAmount: number, reason: string, createdBy: string, effectiveDate?: string) {
+    const sub    = await this.findOne(id);
+    const before = Number(sub.currentAmount);
+    const delta  = afterAmount - before;     // 증감액 자동 계산
     const lastChange = await this.changeRepo.count({
       where: { targetType: ChangeTargetType.SUBCONTRACT, targetId: id },
     });
@@ -105,15 +107,15 @@ export class SubcontractsService {
         targetType: ChangeTargetType.SUBCONTRACT,
         targetId: id,
         changeNo: lastChange + 1,
-        beforeAmount: Number(sub.currentAmount),
-        deltaAmount,
-        afterAmount: Number(sub.currentAmount) + deltaAmount,
+        beforeAmount: before,
+        deltaAmount: delta,
+        afterAmount,
         reason,
         effectiveDate: effectiveDate ? new Date(effectiveDate) : new Date(),
         createdBy,
       }),
     );
-    await this.repo.update(id, { currentAmount: Number(sub.currentAmount) + deltaAmount });
+    await this.repo.update(id, { currentAmount: afterAmount });
     this.eventEmitter.emit('subcontract.changed', { subcontractId: id, projectId: sub.projectId });
     return this.findOne(id);
   }

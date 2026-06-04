@@ -178,6 +178,7 @@ body {
 .ct-badge-green { background: #E8F9F2; color: var(--ct-success); }
 .ct-badge-gray  { background: #F0F0F0; color: var(--ct-text-secondary); }
 .ct-badge-orange { background: #FFF4E5; color: var(--ct-warning); }
+.ct-badge-purple { background: #F3EEFF; color: #7C3AED; }
 
 /* ===== 이상치 행 하이라이트 ===== */
 .anomaly-row td {

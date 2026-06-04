@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
 import { AlertTriangle, CheckCircle, Download, Save } from "lucide-react";
 import { fmtNum } from "@/lib/format";
+import { exportSubBillings } from "@/lib/excel";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   pending: { label: "미입력", cls: "ct-badge-gray" },
@@ -63,6 +64,15 @@ export default function BillingsPage() {
         subtitle={`${month} 기준`}
         actions={
           <div className="flex items-center gap-2">
+            <button
+              onClick={() => exportSubBillings(month, billingList as any[])}
+              disabled={(billingList as any[]).length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
+              style={{ background: "rgba(255,255,255,0.2)" }}
+            >
+              <Download size={14} />
+              엑셀
+            </button>
             <button
               onClick={handleSave}
               disabled={!Object.keys(edits).length || saving}

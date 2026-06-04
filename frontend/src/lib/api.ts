@@ -48,6 +48,7 @@ export const dashboard = {
     fetchApi<any[]>(`/dashboard/progress-trend?months=${months}`),
   getContractComparison: () => fetchApi<any[]>("/dashboard/contract-comparison"),
   getCurrentMonth: () => fetchApi<any>("/dashboard/current-month"),
+  getUpcomingExpiry: (days = 30) => fetchApi<any>(`/dashboard/upcoming-expiry?days=${days}`),
 };
 
 // ===== Clients (발주처) =====
@@ -70,7 +71,7 @@ export const projects = {
     fetchApi<any>("/projects", { method: "POST", body: JSON.stringify(data) }),
   update: (id: number, data: any) =>
     fetchApi<any>(`/projects/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  addChange: (id: number, data: any) =>
+  addChange: (id: number, data: { afterAmount: number; reason: string; effectiveDate?: string }) =>
     fetchApi<any>(`/projects/${id}/changes`, { method: "POST", body: JSON.stringify(data) }),
   getChanges: (id: number) => fetchApi<any[]>(`/projects/${id}/changes`),
   remove: (id: number) => fetchApi<any>(`/projects/${id}`, { method: "DELETE" }),
@@ -97,7 +98,7 @@ export const subcontracts = {
     fetchApi<any>("/subcontracts", { method: "POST", body: JSON.stringify(data) }),
   update: (id: number, data: { contractNo?: string; workScope?: string; contractDate?: string; startDate?: string; endDate?: string }) =>
     fetchApi<any>(`/subcontracts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
-  addChange: (id: number, data: { deltaAmount: number; reason: string; effectiveDate?: string }) =>
+  addChange: (id: number, data: { afterAmount: number; reason: string; effectiveDate?: string }) =>
     fetchApi<any>(`/subcontracts/${id}/changes`, { method: "POST", body: JSON.stringify(data) }),
   getChanges: (id: number) => fetchApi<any[]>(`/subcontracts/${id}/changes`),
   remove: (id: number) => fetchApi<any>(`/subcontracts/${id}`, { method: "DELETE" }),
@@ -143,4 +144,18 @@ export const projectBillings = {
 export const snapshots = {
   getAll: () => fetchApi<any[]>("/snapshots"),
   getByMonth: (month: string) => fetchApi<any>(`/snapshots/by-month?month=${month}`),
+  create: (month?: string) =>
+    fetchApi<any>(`/snapshots/create${month ? `?month=${month}` : ""}`, { method: "POST" }),
+  delete: (month: string) =>
+    fetchApi<any>(`/snapshots/${month}`, { method: "DELETE" }),
+};
+
+// ===== Contract Changes (변동추이) =====
+export const contractChanges = {
+  getAll: () => fetchApi<any[]>("/contract-changes"),
+};
+
+// ===== Reports (리포트) =====
+export const reports = {
+  getOverview: () => fetchApi<any[]>("/reports/overview"),
 };

@@ -11,6 +11,7 @@ import {
   BarChart3,
   TrendingUp,
   FileBarChart,
+  Archive,
   Bell,
   ChevronRight,
 } from "lucide-react";
@@ -45,6 +46,7 @@ const navItems: NavItem[] = [
   },
   { href: "/trends", icon: TrendingUp, label: "변동추이" },
   { href: "/reports", icon: FileBarChart, label: "리포트" },
+  { href: "/snapshots", icon: Archive, label: "월별 마감" },
   { href: "/notifications", icon: Bell, label: "알림" },
 ];
 

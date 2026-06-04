@@ -20,4 +20,9 @@ export class DashboardController {
 
   @Get('current-month')
   getCurrentMonth() { return this.service.getCurrentMonthStatus(); }
+
+  @Get('upcoming-expiry')
+  getUpcomingExpiry(@Query('days') days?: string) {
+    return this.service.getUpcomingExpiry(days ? parseInt(days) : 30);
+  }
 }

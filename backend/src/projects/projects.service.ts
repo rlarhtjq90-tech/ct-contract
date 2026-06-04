@@ -23,7 +23,7 @@ export class CreateProjectDto {
 }
 
 export class AddChangeDto {
-  @IsNumber() deltaAmount: number;
+  @IsNumber() afterAmount: number;   // 변경 후 전체 계약금액
   @IsString() reason: string;
   @IsOptional() @IsDateString() effectiveDate?: string;
 }
@@ -75,6 +75,9 @@ export class ProjectsService {
 
   async addChange(id: number, dto: AddChangeDto, createdBy: string) {
     const project = await this.findOne(id);
+    const before = Number(project.currentAmount);
+    const after  = dto.afterAmount;
+    const delta  = after - before;           // 증감액 자동 계산
     const lastChange = await this.changeRepo.count({
       where: { targetType: ChangeTargetType.PROJECT, targetId: id },
     });
@@ -82,15 +85,15 @@ export class ProjectsService {
       targetType: ChangeTargetType.PROJECT,
       targetId: id,
       changeNo: lastChange + 1,
-      beforeAmount: Number(project.currentAmount),
-      deltaAmount: dto.deltaAmount,
-      afterAmount: Number(project.currentAmount) + dto.deltaAmount,
+      beforeAmount: before,
+      deltaAmount: delta,
+      afterAmount: after,
       reason: dto.reason,
       effectiveDate: dto.effectiveDate ? new Date(dto.effectiveDate) : new Date(),
       createdBy,
     });
     await this.changeRepo.save(change);
-    await this.repo.update(id, { currentAmount: Number(project.currentAmount) + dto.deltaAmount });
+    await this.repo.update(id, { currentAmount: after });
     this.eventEmitter.emit('project.changed', { projectId: id });
     return this.findOne(id);
   }

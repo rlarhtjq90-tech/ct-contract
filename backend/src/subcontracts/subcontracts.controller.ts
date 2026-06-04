@@ -26,10 +26,10 @@ export class SubcontractsController {
   @Post(':id/changes')
   addChange(
     @Param('id', ParseIntPipe) id: number,
-    @Body() body: { deltaAmount: number; reason: string; effectiveDate?: string },
+    @Body() body: { afterAmount: number; reason: string; effectiveDate?: string },
     @Request() req: any,
   ) {
-    return this.service.addChange(id, body.deltaAmount, body.reason, req.user?.name || 'system', body.effectiveDate);
+    return this.service.addChange(id, body.afterAmount, body.reason, req.user?.name || 'system', body.effectiveDate);
   }
 
   @Get(':id/changes')

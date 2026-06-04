@@ -1,11 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { format, subMonths } from 'date-fns';
+import { format, subMonths, addDays } from 'date-fns';
 import { Project, ProjectStatus } from '../entities/project.entity';
 import { Subcontract, SubcontractStatus } from '../entities/subcontract.entity';
 import { MonthlyBilling, BillingStatus } from '../entities/monthly-billing.entity';
 import { ProjectMetric } from '../entities/project-metric.entity';
+import { ProjectBilling } from '../entities/project-billing.entity';
 
 @Injectable()
 export class DashboardService {
@@ -14,6 +15,7 @@ export class DashboardService {
     @InjectRepository(Subcontract) private subRepo: Repository<Subcontract>,
     @InjectRepository(MonthlyBilling) private billingRepo: Repository<MonthlyBilling>,
     @InjectRepository(ProjectMetric) private metricRepo: Repository<ProjectMetric>,
+    @InjectRepository(ProjectBilling) private projectBillingRepo: Repository<ProjectBilling>,
   ) {}
 
   async getSummary() {
@@ -25,28 +27,52 @@ export class DashboardService {
       this.metricRepo.find(),
     ]);
 
-    let totalAmount = 0;
+    let totalSubMetricAmount = 0;
     let weightedSum = 0;
     let delayedCount = 0;
     for (const m of metrics) {
       const amt = Number(m.totalSubcontractAmount);
-      totalAmount += amt;
+      totalSubMetricAmount += amt;
       weightedSum += amt * Number(m.weightedProgress);
       delayedCount += m.delayedCount;
     }
-    const companyProgress = totalAmount > 0 ? weightedSum / totalAmount : 0;
+    const companyProgress = totalSubMetricAmount > 0 ? weightedSum / totalSubMetricAmount : 0;
 
-    // SQLite: created_at stored as ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ) — use substr for month match
     const newSubs = await this.subRepo
       .createQueryBuilder('s')
       .where(`substr(s.created_at, 1, 7) = :month`, { month: currentMonth })
       .getCount().catch(() => 0);
 
-    const amountResult = await this.projectRepo
+    // 도급 현재금액 합계
+    const projectAmountResult = await this.projectRepo
       .createQueryBuilder('p')
       .select('SUM(p.current_amount)', 'total')
       .where('p.status = :status', { status: ProjectStatus.ACTIVE })
       .getRawOne();
+
+    // 하도급 현재금액 합계
+    const subAmountResult = await this.subRepo
+      .createQueryBuilder('s')
+      .select('SUM(s.current_amount)', 'total')
+      .where('s.status = :status', { status: SubcontractStatus.ACTIVE })
+      .getRawOne();
+
+    // 도급 기성 누계 (모든 월 중 최대 cumulativeAmount 합산)
+    const projBillingCumResult = await this.projectBillingRepo
+      .createQueryBuilder('pb')
+      .select('pb.project_id', 'pid')
+      .addSelect('MAX(pb.cumulative_amount)', 'maxCum')
+      .groupBy('pb.project_id')
+      .getRawMany();
+    const totalProjectBillingCumulative = projBillingCumResult.reduce(
+      (s, r) => s + Number(r.maxCum || 0), 0,
+    );
+
+    const totalProjectAmount  = Number(projectAmountResult?.total || 0);
+    const totalSubcontractAmount = Number(subAmountResult?.total || 0);
+    const subRatio = totalProjectAmount > 0
+      ? Math.round((totalSubcontractAmount / totalProjectAmount) * 1000) / 10
+      : 0;
 
     return {
       asOf: new Date().toISOString(),
@@ -54,7 +80,10 @@ export class DashboardService {
         totalProjects,
         totalSubcontracts,
         newSubcontractsThisMonth: newSubs,
-        totalContractAmount: Number(amountResult?.total || 0),
+        totalContractAmount: totalProjectAmount,
+        totalSubcontractAmount,
+        totalProjectBillingCumulative,
+        subRatio,
         weightedAvgProgress: Math.round(companyProgress * 10) / 10,
         delayedCount,
       },
@@ -64,22 +93,18 @@ export class DashboardService {
   async getProgressTrend(months = 12) {
     const result: Array<{ month: string; progress: number; billing: number }> = [];
 
-    // Get all subcontracts with contract amounts for weighted progress calc
     const allSubs = await this.subRepo.find({ select: { id: true, contractAmount: true } });
     const totalContractAmount = allSubs.reduce((s, c) => s + Number(c.contractAmount), 0);
 
     for (let i = months - 1; i >= 0; i--) {
       const month = format(subMonths(new Date(), i), 'yyyy-MM');
 
-      // Billing for this month (actual billing)
       const billingData = await this.billingRepo
         .createQueryBuilder('b')
         .select('SUM(b.actual_amount)', 'totalBilling')
         .where('b.billing_month = :month', { month })
         .getRawOne();
 
-      // Weighted progress: sum of cumulative amounts / total contract amounts
-      // Use billings up to and including this month
       const progressData = await this.billingRepo
         .createQueryBuilder('b')
         .select('b.subcontract_id', 'subId')
@@ -128,13 +153,79 @@ export class DashboardService {
 
   async getCurrentMonthStatus() {
     const currentMonth = format(new Date(), 'yyyy-MM');
-    const billings = await this.billingRepo.find({ where: { billingMonth: currentMonth } });
 
-    const total = billings.length;
-    const submitted = billings.filter((b) => b.status !== BillingStatus.PENDING).length;
-    const approved = billings.filter((b) => b.status === BillingStatus.APPROVED).length;
-    const anomalies = billings.filter((b) => b.isAnomaly).length;
+    // 하도급 기성
+    const subBillings = await this.billingRepo.find({ where: { billingMonth: currentMonth } });
+    const subTotal     = subBillings.length;
+    const subSubmitted = subBillings.filter((b) => b.status !== BillingStatus.PENDING).length;
+    const subApproved  = subBillings.filter((b) => b.status === BillingStatus.APPROVED).length;
+    const subAnomalies = subBillings.filter((b) => b.isAnomaly).length;
 
-    return { total, submitted, approved, anomalies, month: currentMonth };
+    // 도급 기성
+    const projBillings = await this.projectBillingRepo.find({ where: { billingMonth: currentMonth } });
+    const projTotal     = projBillings.length;
+    const projSubmitted = projBillings.filter((b) => b.status !== BillingStatus.PENDING).length;
+    const projApproved  = projBillings.filter((b) => b.status === BillingStatus.APPROVED).length;
+    const projAnomalies = projBillings.filter((b) => b.isAnomaly).length;
+
+    return {
+      month: currentMonth,
+      // 기존 호환 (하도급 기성)
+      total: subTotal,
+      submitted: subSubmitted,
+      approved: subApproved,
+      anomalies: subAnomalies,
+      // 도급·하도급 분리
+      sub: { total: subTotal, submitted: subSubmitted, approved: subApproved, anomalies: subAnomalies },
+      proj: { total: projTotal, submitted: projSubmitted, approved: projApproved, anomalies: projAnomalies },
+    };
+  }
+
+  // 만료 예정 (30일 이내)
+  async getUpcomingExpiry(days = 30) {
+    const today = new Date();
+    const limit = addDays(today, days);
+    const todayStr = format(today, 'yyyy-MM-dd');
+    const limitStr = format(limit, 'yyyy-MM-dd');
+
+    const projects = await this.projectRepo
+      .createQueryBuilder('p')
+      .leftJoinAndSelect('p.client', 'c')
+      .where('p.status = :status', { status: ProjectStatus.ACTIVE })
+      .andWhere('p.end_date IS NOT NULL')
+      .andWhere('p.end_date >= :today', { today: todayStr })
+      .andWhere('p.end_date <= :limit', { limit: limitStr })
+      .orderBy('p.end_date', 'ASC')
+      .getMany();
+
+    const subcontracts = await this.subRepo
+      .createQueryBuilder('s')
+      .leftJoinAndSelect('s.subcontractor', 'sr')
+      .leftJoinAndSelect('s.project', 'p')
+      .where('s.status = :status', { status: SubcontractStatus.ACTIVE })
+      .andWhere('s.end_date IS NOT NULL')
+      .andWhere('s.end_date >= :today', { today: todayStr })
+      .andWhere('s.end_date <= :limit', { limit: limitStr })
+      .orderBy('s.end_date', 'ASC')
+      .getMany();
+
+    return {
+      projects: projects.map((p) => ({
+        id: p.id,
+        name: p.name,
+        clientName: p.client?.name ?? '',
+        endDate: p.endDate,
+        daysLeft: Math.ceil((new Date(p.endDate).getTime() - today.getTime()) / 86400000),
+        type: 'project' as const,
+      })),
+      subcontracts: subcontracts.map((s) => ({
+        id: s.id,
+        subcontractorName: s.subcontractor?.name ?? '',
+        projectName: s.project?.name ?? '',
+        endDate: s.endDate,
+        daysLeft: Math.ceil((new Date(s.endDate).getTime() - today.getTime()) / 86400000),
+        type: 'subcontract' as const,
+      })),
+    };
   }
 }

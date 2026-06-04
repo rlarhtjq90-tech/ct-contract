@@ -19,7 +19,7 @@ const EMPTY_FORM = {
   clientId: "", projectCode: "", name: "", contractAmount: "",
   contractDate: "", startDate: "", endDate: "", description: "",
 };
-const EMPTY_CHANGE = { deltaAmount: "", reason: "", effectiveDate: "" };
+const EMPTY_CHANGE = { afterAmount: "", reason: "", effectiveDate: "" };
 
 export default function ProjectsPage() {
   const queryClient = useQueryClient();
@@ -153,7 +153,14 @@ export default function ProjectsPage() {
                     {isAdmin && <td className="font-mono text-xs" style={{ color: "#888" }}>{p.projectCode}</td>}
                     <td className="font-medium" style={{ color: "#1C90FB" }}>{p.name}</td>
                     <td style={{ color: "#666" }}>{p.client?.name || "-"}</td>
-                    <td className="text-center">{formatAmt(Number(p.contractAmount))}</td>
+                    <td className="text-center">
+                      {formatAmt(Number(p.currentAmount))}
+                      {Number(p.currentAmount) !== Number(p.contractAmount) && (
+                        <div className="text-xs mt-0.5" style={{ color: "#AAA" }}>
+                          원계약 {formatAmt(Number(p.contractAmount))}
+                        </div>
+                      )}
+                    </td>
                     <td style={{ color: "#888" }}>{p.contractDate ? new Date(p.contractDate).toLocaleDateString("ko-KR") : "-"}</td>
                     <td style={{ color: "#888" }}>{p.startDate ? new Date(p.startDate).toLocaleDateString("ko-KR") : "-"}</td>
                     <td style={{ color: "#888" }}>{p.endDate ? new Date(p.endDate).toLocaleDateString("ko-KR") : "-"}</td>
@@ -293,55 +300,72 @@ export default function ProjectsPage() {
       )}
 
       {/* 변경계약 모달 */}
-      {changeTarget && (
-        <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
-          <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
-            <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>변경계약 등록</h3>
-            <p className="text-xs mb-4" style={{ color: "#888" }}>{changeTarget.name}</p>
-            <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경금액 (원)*</label>
-                <input type="text" inputMode="numeric" value={changeForm.deltaAmount}
-                  onChange={(e) => {
-                    const raw = e.target.value.replace(/[^0-9]/g, "");
-                    setChangeForm((f) => ({ ...f, deltaAmount: raw ? Number(raw).toLocaleString("ko-KR") : "" }));
-                  }}
-                  placeholder="예: 500,000,000"
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+      {changeTarget && (() => {
+        const currentAmt = Number(changeTarget.currentAmount);
+        const afterAmt = parseInt(changeForm.afterAmount.replace(/,/g, "")) || 0;
+        const delta = afterAmt - currentAmt;
+        const hasAfter = changeForm.afterAmount !== "";
+        return (
+          <div className="fixed inset-0 flex items-center justify-center z-50" style={{ background: "rgba(0,0,0,0.4)" }}>
+            <div className="bg-white rounded-xl p-6 w-full max-w-sm" style={{ boxShadow: "0 8px 32px rgba(0,0,0,0.15)" }}>
+              <h3 className="font-semibold text-base mb-1" style={{ color: "#333" }}>변경계약 등록</h3>
+              <p className="text-xs mb-3" style={{ color: "#888" }}>{changeTarget.name}</p>
+              {/* 현재 계약금액 참조 */}
+              <div className="rounded-lg px-3 py-2 mb-4 text-xs" style={{ background: "#F7F8FA", border: "1px solid #EBEBEB" }}>
+                <span style={{ color: "#999" }}>현재 계약금액</span>
+                <span className="ml-2 font-semibold" style={{ color: "#333" }}>{fmtMoney(currentAmt)}</span>
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경일</label>
-                <input type="date" value={changeForm.effectiveDate}
-                  onChange={(e) => setChangeForm((f) => ({ ...f, effectiveDate: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경 후 계약금액 (원)*</label>
+                  <input type="text" inputMode="numeric" value={changeForm.afterAmount}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, "");
+                      setChangeForm((f) => ({ ...f, afterAmount: raw ? Number(raw).toLocaleString("ko-KR") : "" }));
+                    }}
+                    placeholder="예: 1,200,000,000"
+                    className="w-full px-3 py-2 rounded text-sm outline-none"
+                    style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+                  {/* 증감액 미리보기 */}
+                  {hasAfter && (
+                    <div className="mt-1.5 text-xs font-medium" style={{ color: delta >= 0 ? "#1C90FB" : "#FC5356" }}>
+                      증감액: {delta >= 0 ? "+" : ""}{fmtMoney(delta)}
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경일</label>
+                  <input type="date" value={changeForm.effectiveDate}
+                    onChange={(e) => setChangeForm((f) => ({ ...f, effectiveDate: e.target.value }))}
+                    className="w-full px-3 py-2 rounded text-sm outline-none"
+                    style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경사유*</label>
+                  <textarea value={changeForm.reason}
+                    onChange={(e) => setChangeForm((f) => ({ ...f, reason: e.target.value }))}
+                    rows={3} placeholder="변경 사유를 입력하세요"
+                    className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
+                    style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+                </div>
               </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>변경사유*</label>
-                <textarea value={changeForm.reason}
-                  onChange={(e) => setChangeForm((f) => ({ ...f, reason: e.target.value }))}
-                  rows={3} placeholder="변경 사유를 입력하세요"
-                  className="w-full px-3 py-2 rounded text-sm outline-none resize-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
+              <div className="flex gap-2 mt-5">
+                <button onClick={() => setChangeTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
+                <button
+                  onClick={() => changeMutation.mutate({
+                    id: changeTarget.id,
+                    data: { afterAmount: afterAmt, reason: changeForm.reason, effectiveDate: changeForm.effectiveDate || undefined },
+                  })}
+                  disabled={!changeForm.afterAmount || afterAmt === currentAmt || !changeForm.reason || changeMutation.isPending}
+                  className="flex-1 py-2 rounded text-sm text-white font-medium"
+                  style={{ background: "#1C90FB" }}>
+                  {changeMutation.isPending ? "저장 중..." : "저장"}
+                </button>
               </div>
-            </div>
-            <div className="flex gap-2 mt-5">
-              <button onClick={() => setChangeTarget(null)} className="flex-1 py-2 rounded text-sm ct-btn-secondary">취소</button>
-              <button
-                onClick={() => changeMutation.mutate({
-                  id: changeTarget.id,
-                  data: { deltaAmount: parseInt(changeForm.deltaAmount.replace(/,/g, "")), reason: changeForm.reason, effectiveDate: changeForm.effectiveDate || undefined },
-                })}
-                disabled={!changeForm.deltaAmount || !changeForm.reason || changeMutation.isPending}
-                className="flex-1 py-2 rounded text-sm text-white font-medium"
-                style={{ background: "#1C90FB" }}>
-                {changeMutation.isPending ? "저장 중..." : "저장"}
-              </button>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
     </div>
   );

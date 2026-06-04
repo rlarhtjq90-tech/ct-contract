@@ -30,6 +30,8 @@ import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SnapshotsModule } from './snapshots/snapshots.module';
 import { GatewayModule } from './gateway/gateway.module';
+import { ContractChangesModule } from './contract-changes/contract-changes.module';
+import { ReportsModule } from './reports/reports.module';
 
 const ENTITIES = [
   User, Client, Project, Subcontractor, Subcontract,
@@ -41,14 +43,31 @@ const ENTITIES = [
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
-    // SQLite (sql.js) — 개발 환경 DB 설치 불필요
-    TypeOrmModule.forRoot({
-      type: 'sqljs',
-      location: 'ct_contract_dev.db',
-      autoSave: true,
-      entities: ENTITIES,
-      synchronize: true,
-      logging: false,
+    // DB: 프로덕션=PostgreSQL, 개발=SQLite(sql.js)
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) => {
+        const dbUrl = config.get<string>('DATABASE_URL');
+        if (dbUrl) {
+          return {
+            type: 'postgres',
+            url: dbUrl,
+            entities: ENTITIES,
+            synchronize: true,
+            ssl: { rejectUnauthorized: false },
+            logging: false,
+          } as any;
+        }
+        return {
+          type: 'sqljs',
+          location: 'ct_contract_dev.db',
+          autoSave: true,
+          entities: ENTITIES,
+          synchronize: true,
+          logging: false,
+        } as any;
+      },
     }),
 
     EventEmitterModule.forRoot(),
@@ -67,6 +86,8 @@ const ENTITIES = [
     GatewayModule,
     DeleteRequestsModule,
     ProjectBillingsModule,
+    ContractChangesModule,
+    ReportsModule,
   ],
 })
 export class AppModule {}
