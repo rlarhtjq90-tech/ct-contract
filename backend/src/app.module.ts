@@ -29,7 +29,6 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { MetricsModule } from './metrics/metrics.module';
 import { NotificationsModule } from './notifications/notifications.module';
 import { SnapshotsModule } from './snapshots/snapshots.module';
-import { GatewayModule } from './gateway/gateway.module';
 import { ContractChangesModule } from './contract-changes/contract-changes.module';
 import { ReportsModule } from './reports/reports.module';
 
@@ -83,7 +82,6 @@ const ENTITIES = [
     MetricsModule,
     NotificationsModule,
     SnapshotsModule,
-    GatewayModule,
     DeleteRequestsModule,
     ProjectBillingsModule,
     ContractChangesModule,
