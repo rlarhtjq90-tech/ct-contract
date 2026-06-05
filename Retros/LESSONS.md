@@ -4,6 +4,15 @@
 #coding 태그 항목은 SessionStart 시 자동 주입됩니다.
 반복 패턴은 /wrap HITL 승급을 통해 적절한 vehicle로 적용됩니다.
 
+## UI / 입력 패턴
+
+### 숫자 입력 콤마 포맷은 focusedId 분기 없이 가능 #coding #ux
+`focusedId` 상태로 포커스 여부에 따라 raw/formatted 전환하면 깜빡임이 생기고 코드가 복잡해진다.
+`onChange`에서 `value.replace(/,/g, "")` 파싱 후 상태에 저장하고, `value={fmtNum(editedAmt)}`로 항상 포맷된 값을 표시하면 동일한 UX를 절반의 코드로 달성할 수 있다.
+
+### 기성 확정 UX는 저장+승인 원자 처리로 단순화 #coding #ux
+"저장 → 승인" 2단계는 결재 플로우처럼 느껴져 혼란을 줄 수 있다. 단일 "확정" 버튼에서 `bulkUpdate` + `approve`를 직렬 호출하면 원자적으로 처리되고, `approve()`는 멱등성이 있으므로 재확정(수정 후 재확정)도 안전하다. 재편집은 클라이언트 `editingRows Set`만으로 제어하면 서버 상태 변경 없이 가능.
+
 ## NestJS
 
 ### ValidationPipe forbidNonWhitelisted 사용 시 DTO 데코레이터 필수 #coding #nestjs

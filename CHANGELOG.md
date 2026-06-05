@@ -2,23 +2,27 @@
 
 ## 현재 상태
 <!-- /wrap이 매 세션 이 섹션을 업데이트합니다 -->
-- **상태:** 개발 진행 중 (Phase 3) — RBAC 단순화 + UI 정리 완료
+- **상태:** 운영 중 — 프론트/백엔드 Vercel 배포 완료, UX 개선 작업 중
 - **주요 기능:**
-  - 로그인 (JWT, admin/pm/viewer — 공통 비밀번호 `ct1234!`)
+  - 로그인 (JWT, admin/pm/viewer — 힌트 버튼 제거됨)
   - 사이드바 아코디언: 도급계약(발주처·기성현황) / 하도급계약(하도급사·기성현황)
-  - 발주처 관리 `/clients`
-  - 하도급사 관리 `/subcontractors`
-  - 도급계약 관리 `/projects` + 변경계약 + canEdit(admin·pm) 직접 삭제
-  - 하도급계약 관리 `/subcontracts` + 변경계약 + canEdit(admin·pm) 직접 삭제
-  - 도급 기성현황 `/project-billings` (발주처 기성 월별 콤마 입력·승인, 계약 자동 연동)
-  - 하도급 기성현황 `/billings` (하도급사 기성 월별 콤마 입력·승인, 계약 자동 연동)
-  - 대시보드 KPI + 차트 (Recharts)
-  - RBAC: admin=모든권한, pm=등록·변경·직접삭제, viewer=조회만 (삭제요청 플로우 제거)
-  - 비고 컬럼 헤더 통일 (4개 페이지 모두 "비고") + ghost 버튼 스타일
+  - 발주처·하도급사·도급계약·하도급계약 CRUD (ghost 버튼, 비고 컬럼 통일)
+  - 도급 기성현황 `/project-billings` — 행별 확정/수정 버튼, 실시간 콤마 포맷
+  - 하도급 기성현황 `/billings` — 행별 확정/수정 버튼, 실시간 콤마 포맷
+  - 대시보드 KPI + 차트 + 도급계약별 기성 비교 섹션 (이중 진행바, 배포 대기)
+  - RBAC: admin=모든권한, pm=등록·변경·직접삭제, viewer=조회만
+  - Vercel 배포: 프론트(ct-contract.vercel.app) + 백엔드(ct-contract-backend.vercel.app) + Neon PostgreSQL
 - **알려진 이슈:** 없음
 
 ## 세션 로그
 <!-- ⚠️ APPEND ONLY — 아래 항목을 절대 삭제/수정하지 마세요. 새 항목은 이 줄 바로 아래에 추가합니다. -->
+
+### 2026-06-05
+- Vercel 배포 완료: 백엔드 NestJS 서버리스(ct-contract-backend.vercel.app) + Neon PostgreSQL 연결, devDependencies 설치 옵션 수정
+- 로그인 페이지 계정 힌트(PM/viewer 버튼) 및 기본값(admin 이메일·비밀번호) 제거
+- 기성 금액 입력 실시간 천단위 콤마 표시 (도급·하도급 공통)
+- 기성 확정 UX 개편: 저장+승인 2단계 → 행별 "확정" 버튼 (저장+확정 동시), 확정 후 "수정" 버튼으로 재편집 가능
+- 대시보드 "도급계약별 기성 비교" 섹션 추가: 도급기성/하도급기성 이중 진행바, Gap 표시 (로컬 완료, 배포 대기)
 
 ### 2026-05-29
 - PM 삭제요청 플로우 제거: projects·subcontracts에서 canEdit(admin+pm) 모두 직접 삭제로 통일
