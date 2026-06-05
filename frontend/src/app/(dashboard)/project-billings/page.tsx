@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { projectBillings } from "@/lib/api";
 import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
@@ -12,44 +12,51 @@ import { exportProjectBillings } from "@/lib/excel";
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
   pending: { label: "미입력", cls: "ct-badge-gray" },
   submitted: { label: "입력완료", cls: "ct-badge-blue" },
-  approved: { label: "승인완료", cls: "ct-badge-green" },
+  approved: { label: "확정완료", cls: "ct-badge-green" },
   rejected: { label: "반려", cls: "ct-badge-red" },
 };
 
 export default function ProjectBillingsPage() {
   const queryClient = useQueryClient();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
-  const [edits, setEdits] = useState<Record<number, { actualAmount?: number }>>({});
-  const [saving, setSaving] = useState(false);
-  const [focusedId, setFocusedId] = useState<number | null>(null);
+  const [edits, setEdits] = useState<Record<number, { actualAmount: number }>>({});
+  const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
+  const [confirming, setConfirming] = useState<Set<number>>(new Set());
 
   const { data: billingList = [], isLoading } = useQuery({
     queryKey: ["project-billings", month],
     queryFn: () => projectBillings.getByMonth(month),
   });
 
-  const approveMutation = useMutation({
-    mutationFn: (id: number) => projectBillings.approve(id),
-    onSuccess: () => {
+  const handleConfirm = async (id: number, actualAmount: number) => {
+    setConfirming((prev) => new Set(prev).add(id));
+    try {
+      await projectBillings.bulkUpdate([{ id, actualAmount }]);
+      await projectBillings.approve(id);
+      setEditingRows((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
+      setEdits((prev) => {
+        const n = { ...prev };
+        delete n[id];
+        return n;
+      });
       queryClient.invalidateQueries({ queryKey: ["project-billings", month] });
       queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] });
-    },
-  });
-
-  const handleSave = async () => {
-    const updates = Object.entries(edits).map(([id, vals]) => ({
-      id: parseInt(id),
-      ...vals,
-    }));
-    if (!updates.length) return;
-    setSaving(true);
-    try {
-      await projectBillings.bulkUpdate(updates);
-      queryClient.invalidateQueries({ queryKey: ["project-billings", month] });
-      setEdits({});
     } finally {
-      setSaving(false);
+      setConfirming((prev) => {
+        const s = new Set(prev);
+        s.delete(id);
+        return s;
+      });
     }
+  };
+
+  const handleEdit = (id: number, currentAmount: number) => {
+    setEditingRows((prev) => new Set(prev).add(id));
+    setEdits((prev) => ({ ...prev, [id]: { actualAmount: currentAmount } }));
   };
 
   const anomalyCount = (billingList as any[]).filter((b) => b.isAnomaly).length;
@@ -71,18 +78,6 @@ export default function ProjectBillingsPage() {
               <Download size={14} />
               엑셀
             </button>
-            <button
-              onClick={handleSave}
-              disabled={!Object.keys(edits).length || saving}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded text-sm font-medium text-white"
-              style={{
-                background: Object.keys(edits).length ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.1)",
-                cursor: Object.keys(edits).length ? "pointer" : "not-allowed",
-              }}
-            >
-              <Save size={14} />
-              {saving ? "저장 중..." : "저장"}
-            </button>
           </div>
         }
       />
@@ -98,6 +93,7 @@ export default function ProjectBillingsPage() {
               onChange={(e) => {
                 setMonth(e.target.value);
                 setEdits({});
+                setEditingRows(new Set());
               }}
               className="px-3 py-1.5 rounded-lg text-sm outline-none"
               style={{ border: "1px solid #E6E6E6", color: "#333" }}
@@ -118,7 +114,7 @@ export default function ProjectBillingsPage() {
               style={{ background: "#E8F9F2", border: "1px solid #B8EFDA" }}>
               <CheckCircle size={13} style={{ color: "#1DC078" }} />
               <span className="text-xs font-medium" style={{ color: "#1DC078" }}>
-                승인완료 {approvedCount}/{(billingList as any[]).length}건
+                확정완료 {approvedCount}/{(billingList as any[]).length}건
               </span>
             </div>
           </div>
@@ -138,7 +134,7 @@ export default function ProjectBillingsPage() {
                   <th className="text-right" style={{ minWidth: "90px" }}>누적금액</th>
                   <th style={{ minWidth: "110px" }}>기성률</th>
                   <th style={{ minWidth: "80px" }}>상태</th>
-                  <th style={{ minWidth: "70px" }}>승인</th>
+                  <th style={{ minWidth: "70px" }}>비고</th>
                 </tr>
               </thead>
               <tbody>
@@ -161,11 +157,15 @@ export default function ProjectBillingsPage() {
                   (billingList as any[]).map((b: any) => {
                     const edit = edits[b.id] || {};
                     const isEdited = b.id in edits;
+                    const isConfirmed = b.status === "approved";
+                    const isEditing = editingRows.has(b.id);
+                    const isEditable = !isConfirmed || isEditing;
+
                     const contractAmt = Number(b.project?.currentAmount || 0);
-                    const editedAmt = edit.actualAmount ?? Number(b.actualAmount);           // 당월금액
-                    const prevCumul = Number(b.cumulativeAmount) - Number(b.actualAmount);  // 전회금액
-                    const newCumul  = prevCumul + editedAmt;                                // 누적금액 (실시간)
-                    const liveRate  = contractAmt > 0 ? (newCumul / contractAmt) * 100 : 0; // 기성률 (실시간)
+                    const editedAmt = edit.actualAmount ?? Number(b.actualAmount);
+                    const prevCumul = Number(b.cumulativeAmount) - Number(b.actualAmount);
+                    const newCumul = prevCumul + editedAmt;
+                    const liveRate = contractAmt > 0 ? (newCumul / contractAmt) * 100 : 0;
 
                     return (
                       <tr
@@ -199,21 +199,12 @@ export default function ProjectBillingsPage() {
                         </td>
                         {/* 당월금액 */}
                         <td className="text-right">
-                          {b.status === "approved" ? (
-                            <span className="text-sm font-medium" style={{ color: "#333" }}>
-                              {fmtNum(editedAmt)}
-                            </span>
-                          ) : (
+                          {isEditable ? (
                             <input
                               type="text"
                               inputMode="numeric"
-                              value={
-                                focusedId === b.id
-                                  ? (editedAmt || "")
-                                  : (editedAmt ? fmtNum(editedAmt) : "")
-                              }
-                              onFocus={(e) => { setFocusedId(b.id); e.target.select(); }}
-                              onBlur={() => setFocusedId(null)}
+                              value={editedAmt ? fmtNum(editedAmt) : ""}
+                              onFocus={(e) => e.target.select()}
                               onChange={(e) => {
                                 const raw = parseInt(e.target.value.replace(/,/g, "")) || 0;
                                 setEdits((prev) => ({
@@ -223,10 +214,14 @@ export default function ProjectBillingsPage() {
                               }}
                               className="w-full text-right px-2 py-1 rounded text-sm outline-none"
                               style={{
-                                border: `1px solid ${isEdited ? "#1C90FB" : "#E6E6E6"}`,
+                                border: `1px solid ${isEdited || isEditing ? "#1C90FB" : "#E6E6E6"}`,
                                 color: "#333",
                               }}
                             />
+                          ) : (
+                            <span className="text-sm font-medium" style={{ color: "#333" }}>
+                              {fmtNum(editedAmt)}
+                            </span>
                           )}
                         </td>
                         {/* 누적금액 (실시간) */}
@@ -255,18 +250,23 @@ export default function ProjectBillingsPage() {
                           </span>
                         </td>
                         <td>
-                          {b.status !== "approved" && (
+                          {isEditable ? (
                             <button
-                              onClick={() => approveMutation.mutate(b.id)}
-                              disabled={approveMutation.isPending}
-                              className="text-xs px-2 py-1 rounded font-medium"
-                              style={{ background: "#1C90FB", color: "#fff" }}
+                              onClick={() => handleConfirm(b.id, editedAmt)}
+                              disabled={confirming.has(b.id)}
+                              className="text-xs px-2 py-1 rounded font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: confirming.has(b.id) ? "#AAA" : "#1C90FB" }}
                             >
-                              승인
+                              {confirming.has(b.id) ? "처리 중..." : "확정"}
                             </button>
-                          )}
-                          {b.status === "approved" && (
-                            <span className="text-xs" style={{ color: "#1DC078" }}>✓완료</span>
+                          ) : (
+                            <button
+                              onClick={() => handleEdit(b.id, Number(b.actualAmount))}
+                              className="text-xs px-2 py-1 rounded font-medium transition-colors hover:bg-[#F5F5F5]"
+                              style={{ color: "#7C3AED" }}
+                            >
+                              수정
+                            </button>
                           )}
                         </td>
                       </tr>
