@@ -49,6 +49,7 @@ export const dashboard = {
   getContractComparison: () => fetchApi<any[]>("/dashboard/contract-comparison"),
   getCurrentMonth: () => fetchApi<any>("/dashboard/current-month"),
   getUpcomingExpiry: (days = 30) => fetchApi<any>(`/dashboard/upcoming-expiry?days=${days}`),
+  getBillingComparison: () => fetchApi<any[]>("/dashboard/billing-comparison"),
 };
 
 // ===== Clients (발주처) =====

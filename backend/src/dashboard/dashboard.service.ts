@@ -181,6 +181,70 @@ export class DashboardService {
     };
   }
 
+  // 도급계약별 기성 비교 (도급기성 누계 vs 하도급기성 합계 누계)
+  async getBillingComparison() {
+    // 활성 도급계약 + 소속 하도급계약 목록
+    const projects = await this.projectRepo.find({
+      where: { status: ProjectStatus.ACTIVE },
+      relations: { subcontracts: true },
+    });
+
+    // 프로젝트별 도급기성 누계 (approved, MAX cumulative)
+    const projBillingData = await this.projectBillingRepo
+      .createQueryBuilder('pb')
+      .select('pb.project_id', 'projectId')
+      .addSelect('MAX(pb.cumulative_amount)', 'cumul')
+      .where('pb.status = :status', { status: BillingStatus.APPROVED })
+      .groupBy('pb.project_id')
+      .getRawMany();
+
+    // 하도급계약별 기성 누계 (approved, MAX cumulative per subcontract)
+    const subBillingData = await this.billingRepo
+      .createQueryBuilder('b')
+      .select('b.subcontract_id', 'subcontractId')
+      .addSelect('MAX(b.cumulative_amount)', 'cumul')
+      .where('b.status = :status', { status: BillingStatus.APPROVED })
+      .groupBy('b.subcontract_id')
+      .getRawMany();
+
+    const projBillingMap = new Map(
+      projBillingData.map((r) => [Number(r.projectId), Number(r.cumul || 0)]),
+    );
+    const subBillingMap = new Map(
+      subBillingData.map((r) => [Number(r.subcontractId), Number(r.cumul || 0)]),
+    );
+
+    return projects.map((p) => {
+      const contractAmount = Number(p.currentAmount);
+      const subcontractTotal =
+        p.subcontracts?.reduce((s, c) => s + Number(c.currentAmount), 0) || 0;
+      const projBillingCumul = projBillingMap.get(p.id) || 0;
+      const subBillingCumul =
+        p.subcontracts?.reduce((s, c) => s + (subBillingMap.get(c.id) || 0), 0) || 0;
+      const projProgressRate =
+        contractAmount > 0
+          ? Math.round((projBillingCumul / contractAmount) * 1000) / 10
+          : 0;
+      const subProgressRate =
+        subcontractTotal > 0
+          ? Math.round((subBillingCumul / subcontractTotal) * 1000) / 10
+          : 0;
+
+      return {
+        projectId: p.id,
+        projectName: p.name,
+        projectCode: p.projectCode,
+        contractAmount,
+        subcontractTotal,
+        projBillingCumul,
+        projProgressRate,
+        subBillingCumul,
+        subProgressRate,
+        gap: projBillingCumul - subBillingCumul,
+      };
+    });
+  }
+
   // 만료 예정 (30일 이내)
   async getUpcomingExpiry(days = 30) {
     const today = new Date();

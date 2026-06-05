@@ -25,4 +25,7 @@ export class DashboardController {
   getUpcomingExpiry(@Query('days') days?: string) {
     return this.service.getUpcomingExpiry(days ? parseInt(days) : 30);
   }
+
+  @Get('billing-comparison')
+  getBillingComparison() { return this.service.getBillingComparison(); }
 }

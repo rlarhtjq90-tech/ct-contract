@@ -155,6 +155,10 @@ export default function DashboardPage() {
     queryKey: ["dashboard-expiry"],
     queryFn: () => dashboard.getUpcomingExpiry(30),
   });
+  const { data: billingComparison = [] } = useQuery({
+    queryKey: ["billing-comparison"],
+    queryFn: dashboard.getBillingComparison,
+  });
 
   const kpi = summary?.kpi;
   const expiryItems = [
@@ -335,6 +339,82 @@ export default function DashboardPage() {
             )}
           </div>
         </div>
+
+        {/* ── 도급계약별 기성 비교 ── */}
+        <div className="ct-card p-5">
+          <h3 className="text-sm font-semibold mb-4" style={{ color: "#333" }}>
+            도급계약별 기성 비교
+            <span className="ml-2 text-xs font-normal" style={{ color: "#999" }}>전체 누계 기준</span>
+          </h3>
+
+          {(billingComparison as any[]).length === 0 ? (
+            <div className="text-center py-8 text-sm" style={{ color: "#AAA" }}>
+              확정된 기성 데이터가 없습니다.
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {(billingComparison as any[]).map((item: any) => (
+                <div key={item.projectId} className="rounded-lg p-4"
+                  style={{ border: "1px solid #F0F0F0" }}>
+                  {/* 헤더: 프로젝트명 + 기성률 요약 */}
+                  <div className="flex justify-between items-center mb-3">
+                    <div>
+                      <span className="text-sm font-medium" style={{ color: "#333" }}>
+                        {item.projectName}
+                      </span>
+                      <span className="text-xs ml-2" style={{ color: "#AAA" }}>
+                        {item.projectCode}
+                      </span>
+                    </div>
+                    <div className="flex gap-3 text-xs font-medium">
+                      <span style={{ color: "#1C90FB" }}>도급 {item.projProgressRate.toFixed(1)}%</span>
+                      <span style={{ color: "#7C3AED" }}>하도급 {item.subProgressRate.toFixed(1)}%</span>
+                    </div>
+                  </div>
+
+                  {/* 도급기성 진행바 */}
+                  <div className="flex items-center gap-3 mb-1.5">
+                    <span className="text-xs flex-shrink-0 w-14 text-right" style={{ color: "#666" }}>도급기성</span>
+                    <div className="flex-1 h-2 rounded-full" style={{ background: "#F0F0F0" }}>
+                      <div className="h-2 rounded-full transition-all"
+                        style={{ background: "#1C90FB", width: `${Math.min(item.projProgressRate, 100)}%` }} />
+                    </div>
+                    <span className="text-xs w-10 text-right font-medium" style={{ color: "#1C90FB" }}>
+                      {item.projProgressRate.toFixed(1)}%
+                    </span>
+                    <span className="text-xs w-20 text-right" style={{ color: "#666" }}>
+                      {fmtMoneyAxis(item.projBillingCumul)}
+                    </span>
+                  </div>
+
+                  {/* 하도급기성 진행바 */}
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className="text-xs flex-shrink-0 w-14 text-right" style={{ color: "#666" }}>하도급기성</span>
+                    <div className="flex-1 h-2 rounded-full" style={{ background: "#F0F0F0" }}>
+                      <div className="h-2 rounded-full transition-all"
+                        style={{ background: "#7C3AED", width: `${Math.min(item.subProgressRate, 100)}%` }} />
+                    </div>
+                    <span className="text-xs w-10 text-right font-medium" style={{ color: "#7C3AED" }}>
+                      {item.subProgressRate.toFixed(1)}%
+                    </span>
+                    <span className="text-xs w-20 text-right" style={{ color: "#666" }}>
+                      {fmtMoneyAxis(item.subBillingCumul)}
+                    </span>
+                  </div>
+
+                  {/* Gap */}
+                  <div className="flex justify-end">
+                    <span className="text-xs font-medium"
+                      style={{ color: item.gap >= 0 ? "#1DC078" : "#FC5356" }}>
+                      {item.gap >= 0 ? "▲" : "▼"} Gap {fmtMoneyAxis(Math.abs(item.gap))}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
     </div>
   );
