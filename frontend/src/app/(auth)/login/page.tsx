@@ -6,8 +6,8 @@ import { auth } from "@/lib/api";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("admin@ct.co.kr");
-  const [password, setPassword] = useState("ct1234!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -173,26 +173,6 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* 계정 안내 */}
-          <div className="mt-5 pt-4" style={{ borderTop: "1px solid #F0F0F0" }}>
-            <div className="space-y-1">
-              {[
-                { email: "pm@ct.co.kr",     pw: "ct1234!" },
-                { email: "viewer@ct.co.kr", pw: "ct1234!" },
-              ].map((a) => (
-                <button
-                  key={a.email}
-                  type="button"
-                  onClick={() => { setEmail(a.email); setPassword(a.pw); }}
-                  className="w-full flex items-center justify-between px-3 py-1.5 rounded text-left"
-                  style={{ background: "#F6F8FA" }}
-                >
-                  <span className="text-xs" style={{ color: "#666" }}>{a.email}</span>
-                  <span className="text-xs" style={{ color: "#AAA" }}>{a.pw}</span>
-                </button>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </div>
