@@ -16,6 +16,7 @@ import { Notification } from './entities/notification.entity';
 import { DeleteRequest } from './entities/delete-request.entity';
 import { ProjectBilling } from './entities/project-billing.entity';
 
+import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
 import { DeleteRequestsModule } from './delete-requests/delete-requests.module';
 import { ProjectBillingsModule } from './project-billings/project-billings.module';
@@ -39,6 +40,7 @@ const ENTITIES = [
 ];
 
 @Module({
+  controllers: [HealthController],
   imports: [
     ConfigModule.forRoot({ isGlobal: true }),
 
