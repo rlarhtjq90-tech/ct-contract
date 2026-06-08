@@ -13,6 +13,14 @@
 ### 기성 확정 UX는 저장+승인 원자 처리로 단순화 #coding #ux
 "저장 → 승인" 2단계는 결재 플로우처럼 느껴져 혼란을 줄 수 있다. 단일 "확정" 버튼에서 `bulkUpdate` + `approve`를 직렬 호출하면 원자적으로 처리되고, `approve()`는 멱등성이 있으므로 재확정(수정 후 재확정)도 안전하다. 재편집은 클라이언트 `editingRows Set`만으로 제어하면 서버 상태 변경 없이 가능.
 
+## Deployment / 서버리스
+
+### NestJS 서버리스 콜드 스타트는 health 엔드포인트 + UptimeRobot으로 방지 #coding #deployment
+NestJS는 DI 컨테이너 초기화 + DB 연결로 콜드 스타트가 2~5초 걸린다. `/api/health`에서 `SELECT 1` 쿼리까지 실행하는 엔드포인트를 만들고, UptimeRobot(무료) 5분 인터벌로 ping하면 비용 없이 서버·DB를 항상 워밍업 상태로 유지할 수 있다.
+
+### 수치 비교 UI는 차트보다 테이블+인라인 바 조합이 실무 가독성 높음 #coding #ux
+여러 항목의 금액·비율을 비교할 때 불릿 차트(오버레이 바)보다 테이블 행에 숫자 컬럼 + 얇은 인라인 progress bar를 넣는 방식이 정렬·스캔이 쉬워 실무 사용자에게 더 직관적이다.
+
 ## NestJS
 
 ### ValidationPipe forbidNonWhitelisted 사용 시 DTO 데코레이터 필수 #coding #nestjs

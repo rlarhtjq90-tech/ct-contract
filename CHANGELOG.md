@@ -2,20 +2,25 @@
 
 ## 현재 상태
 <!-- /wrap이 매 세션 이 섹션을 업데이트합니다 -->
-- **상태:** 운영 중 — 프론트/백엔드 Vercel 배포 완료, UX 개선 작업 중
+- **상태:** 운영 중 — 프론트/백엔드 Vercel 배포 완료, UptimeRobot 워밍업 적용
 - **주요 기능:**
   - 로그인 (JWT, admin/pm/viewer — 힌트 버튼 제거됨)
   - 사이드바 아코디언: 도급계약(발주처·기성현황) / 하도급계약(하도급사·기성현황)
   - 발주처·하도급사·도급계약·하도급계약 CRUD (ghost 버튼, 비고 컬럼 통일)
   - 도급 기성현황 `/project-billings` — 행별 확정/수정 버튼, 실시간 콤마 포맷
   - 하도급 기성현황 `/billings` — 행별 확정/수정 버튼, 실시간 콤마 포맷
-  - 대시보드 KPI + 차트 + 도급계약별 기성 비교 섹션 (이중 진행바, 배포 대기)
+  - 대시보드 KPI + 차트 + 도급계약별 기성현황 테이블 (계약명/계약금액/도급기성/기성률+바/하도급기성/Gap)
   - RBAC: admin=모든권한, pm=등록·변경·직접삭제, viewer=조회만
   - Vercel 배포: 프론트(ct-contract.vercel.app) + 백엔드(ct-contract-backend.vercel.app) + Neon PostgreSQL
+  - `/api/health` 엔드포인트 + UptimeRobot 5분 워밍업 (콜드 스타트 방지)
 - **알려진 이슈:** 없음
 
 ## 세션 로그
 <!-- ⚠️ APPEND ONLY — 아래 항목을 절대 삭제/수정하지 마세요. 새 항목은 이 줄 바로 아래에 추가합니다. -->
+
+### 2026-06-08
+- 대시보드 "도급계약별 기성현황" 불릿 차트 → 6컬럼 테이블로 교체 (계약명/계약금액/도급기성/기성률+인라인바/하도급기성/Gap)
+- `/api/health` 엔드포인트 추가 + UptimeRobot 5분 워밍업으로 콜드 스타트 방지
 
 ### 2026-06-05
 - Vercel 배포 완료: 백엔드 NestJS 서버리스(ct-contract-backend.vercel.app) + Neon PostgreSQL 연결, devDependencies 설치 옵션 수정
