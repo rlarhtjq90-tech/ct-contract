@@ -64,7 +64,7 @@ export class ContractChangesService {
         targetType: 'project' as const,
         targetId: id,
         targetName: project?.name ?? '(삭제된 계약)',
-        targetCode: project?.projectCode ?? '-',
+        targetCode: '-',
         relatedName: project?.client?.name ?? '-',
         originalAmount: Number(changes[0]?.beforeAmount ?? 0),
         currentAmount: Number(project?.currentAmount ?? last?.afterAmount ?? 0),

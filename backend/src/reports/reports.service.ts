@@ -84,7 +84,6 @@ export class ReportsService {
       clientMap.get(clientId)!.projects.push({
         id: project.id,
         name: project.name,
-        projectCode: project.projectCode,
         status: project.status,
         startDate: project.startDate,
         endDate: project.endDate,

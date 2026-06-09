@@ -16,7 +16,7 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const EMPTY_FORM = {
-  clientId: "", projectCode: "", name: "", contractAmount: "",
+  clientId: "", name: "", contractAmount: "",
   contractDate: "", startDate: "", endDate: "", description: "",
 };
 const EMPTY_CHANGE = { afterAmount: "", reason: "", effectiveDate: "" };
@@ -88,11 +88,11 @@ export default function ProjectsPage() {
 
   const formatAmt = fmtMoney;
 
-  // 컬럼 수: [프로젝트코드] + 프로젝트명+발주처+계약금액+계약일+착공일+준공일+상태(7) + [액션]
-  const colCount = (isAdmin ? 1 : 0) + 7 + (canEdit ? 1 : 0);
+  // 컬럼 수: 프로젝트명+발주처+계약금액+계약일+착공일+준공일+상태(7) + [액션]
+  const colCount = 7 + (canEdit ? 1 : 0);
 
   const filtered = data.filter(
-    (p: any) => p.name.includes(search) || (p.projectCode || "").includes(search) || (p.client?.name || "").includes(search)
+    (p: any) => p.name.includes(search) || (p.client?.name || "").includes(search)
   );
 
   return (
@@ -115,7 +115,7 @@ export default function ProjectsPage() {
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#AAA" }} />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="프로젝트명, 코드, 발주처 검색"
+              placeholder="프로젝트명, 발주처 검색"
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none"
               style={{ border: "1px solid #E6E6E6", width: "300px", color: "#333" }} />
           </div>
@@ -125,7 +125,6 @@ export default function ProjectsPage() {
           <table className="ct-table">
             <thead>
               <tr>
-                {isAdmin && <th>프로젝트 코드</th>}
                 <th>프로젝트명</th>
                 <th>발주처</th>
                 <th className="text-center">계약금액</th>
@@ -150,7 +149,6 @@ export default function ProjectsPage() {
                 const pendingReq = pendingMap[`project_${p.id}`];
                 return (
                   <tr key={p.id} style={pendingReq ? { background: "#FFF8F8" } : {}}>
-                    {isAdmin && <td className="font-mono text-xs" style={{ color: "#888" }}>{p.projectCode}</td>}
                     <td className="font-medium" style={{ color: "#1C90FB" }}>{p.name}</td>
                     <td style={{ color: "#666" }}>{p.client?.name || "-"}</td>
                     <td className="text-center">
@@ -243,12 +241,6 @@ export default function ProjectsPage() {
               <div className="col-span-2">
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>프로젝트명*</label>
                 <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }} />
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>프로젝트 코드*</label>
-                <input value={form.projectCode} onChange={(e) => setForm((f) => ({ ...f, projectCode: e.target.value }))}
                   className="w-full px-3 py-2 rounded text-sm outline-none"
                   style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>

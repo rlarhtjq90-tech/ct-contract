@@ -106,7 +106,6 @@ export class SnapshotsService {
       return {
         id: p.id,
         name: p.name,
-        projectCode: p.projectCode,
         clientName: p.client?.name ?? '',
         status: p.status,
         contractAmount: Number(p.contractAmount),

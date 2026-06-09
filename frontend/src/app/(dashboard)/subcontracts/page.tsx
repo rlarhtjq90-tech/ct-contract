@@ -275,7 +275,7 @@ export default function SubcontractsPage() {
                 <select value={form.projectId} onChange={(e) => setForm((f) => ({ ...f, projectId: e.target.value }))}
                   className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }}>
                   <option value="">도급계약 선택</option>
-                  {projectsList.map((p: any) => <option key={p.id} value={p.id}>{p.name} ({p.projectCode})</option>)}
+                  {projectsList.map((p: any) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </select>
               </div>
               <div className="col-span-2">

@@ -53,31 +53,31 @@ async function seed() {
   const projectRepo = AppDataSource.getRepository(Project);
   const projectsData = [
     {
-      client: clients[0], projectCode: 'P2025-001', name: '경부고속도로 4차로 확장공사 1공구',
+      client: clients[0], name: '경부고속도로 4차로 확장공사 1공구',
       contractAmount: 12_000_000_000, currentAmount: 12_000_000_000,
       startDate: new Date('2025-01-15'), endDate: new Date('2027-06-30'), status: ProjectStatus.ACTIVE,
       description: '경부고속도로 천안~청주 구간 4차로 확장',
     },
     {
-      client: clients[0], projectCode: 'P2025-002', name: '서해안고속도로 교량 보강공사',
+      client: clients[0], name: '서해안고속도로 교량 보강공사',
       contractAmount: 5_800_000_000, currentAmount: 5_800_000_000,
       startDate: new Date('2025-03-01'), endDate: new Date('2026-08-31'), status: ProjectStatus.ACTIVE,
       description: '서해안선 제3교량 내진보강 및 상판 교체',
     },
     {
-      client: clients[1], projectCode: 'P2024-003', name: '서울 은평구 도시재생 뉴딜사업',
+      client: clients[1], name: '서울 은평구 도시재생 뉴딜사업',
       contractAmount: 8_500_000_000, currentAmount: 8_500_000_000,
       startDate: new Date('2024-07-01'), endDate: new Date('2026-12-31'), status: ProjectStatus.ACTIVE,
       description: '은평구 노후 불량건축물 정비 및 기반시설 개선',
     },
     {
-      client: clients[2], projectCode: 'P2024-004', name: '수도권 광역상수도 3단계 관로 정비',
+      client: clients[2], name: '수도권 광역상수도 3단계 관로 정비',
       contractAmount: 3_200_000_000, currentAmount: 3_200_000_000,
       startDate: new Date('2024-04-01'), endDate: new Date('2025-09-30'), status: ProjectStatus.COMPLETED,
       description: '광역상수도 노후 관로 교체 및 수질 개선',
     },
     {
-      client: clients[1], projectCode: 'P2026-005', name: '강남구 지하차도 신설공사',
+      client: clients[1], name: '강남구 지하차도 신설공사',
       contractAmount: 15_000_000_000, currentAmount: 15_000_000_000,
       startDate: new Date('2026-02-01'), endDate: new Date('2028-12-31'), status: ProjectStatus.ACTIVE,
       description: '개포동 지하차도 신설 및 지하 주차장 조성',
@@ -85,7 +85,7 @@ async function seed() {
   ];
   const projects: Project[] = [];
   for (const p of projectsData) {
-    let existing = await projectRepo.findOneBy({ projectCode: p.projectCode });
+    let existing = await projectRepo.findOneBy({ name: p.name });
     if (!existing) {
       existing = projectRepo.create(p);
       await projectRepo.save(existing);

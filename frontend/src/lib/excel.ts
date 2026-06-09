@@ -13,7 +13,7 @@ export function exportReports(clientGroups: any[]) {
 
   // 헤더
   rows.push([
-    "발주처", "계약명", "코드", "상태",
+    "발주처", "계약명", "상태",
     "원계약금액", "현계약금액", "기성누계", "기성률(%)",
     "하도급합계", "하도급비율(%)", "변경횟수",
     "구분",                          // 도급 / 하도급
@@ -26,7 +26,6 @@ export function exportReports(clientGroups: any[]) {
       rows.push([
         group.client.name,
         proj.name,
-        proj.projectCode,
         statusLabel(proj.status),
         proj.originalAmount,
         proj.currentAmount,
@@ -62,7 +61,7 @@ export function exportReports(clientGroups: any[]) {
 
   // 열 너비
   ws["!cols"] = [
-    { wch: 16 }, { wch: 28 }, { wch: 14 }, { wch: 8 },
+    { wch: 16 }, { wch: 28 }, { wch: 8 },
     { wch: 14 }, { wch: 14 }, { wch: 14 }, { wch: 9 },
     { wch: 14 }, { wch: 10 }, { wch: 8 },
     { wch: 6 },

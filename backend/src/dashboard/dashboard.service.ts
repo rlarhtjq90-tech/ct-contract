@@ -143,7 +143,6 @@ export class DashboardService {
       return {
         id: p.id,
         name: p.name.length > 10 ? p.name.substring(0, 10) + '...' : p.name,
-        projectCode: p.projectCode,
         contractAmount: Number(p.currentAmount),
         subcontractTotal: subTotal,
         ratio: Number(p.currentAmount) > 0 ? (subTotal / Number(p.currentAmount)) * 100 : 0,
@@ -233,7 +232,6 @@ export class DashboardService {
       return {
         projectId: p.id,
         projectName: p.name,
-        projectCode: p.projectCode,
         contractAmount,
         subcontractTotal,
         projBillingCumul,

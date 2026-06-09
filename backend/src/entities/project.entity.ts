@@ -24,9 +24,6 @@ export class Project {
   @JoinColumn({ name: 'client_id' })
   client: Client;
 
-  @Column({ name: 'project_code', length: 40, unique: true })
-  projectCode: string;
-
   @Column({ length: 200 })
   name: string;
 

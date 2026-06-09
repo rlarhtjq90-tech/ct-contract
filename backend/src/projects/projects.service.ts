@@ -13,7 +13,6 @@ import { IsString, IsOptional, IsNumber, IsDateString } from 'class-validator';
 
 export class CreateProjectDto {
   @IsNumber() clientId: number;
-  @IsString() projectCode: string;
   @IsString() name: string;
   @IsNumber() contractAmount: number;
   @IsOptional() @IsDateString() contractDate?: string;
