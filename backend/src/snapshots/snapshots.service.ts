@@ -92,7 +92,6 @@ export class SnapshotsService {
         return {
           id: s.id,
           subcontractorName: s.subcontractor?.name ?? '',
-          contractNo: s.contractNo ?? '',
           workScope: s.workScope ?? '',
           contractAmount: Number(s.contractAmount),
           currentAmount: subCurrAmt,

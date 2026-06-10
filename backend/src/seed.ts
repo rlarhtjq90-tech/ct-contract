@@ -127,34 +127,34 @@ async function seed() {
   const subcontractRepo = AppDataSource.getRepository(Subcontract);
   const subcontractsData = [
     // P2025-001 경부고속도로 확장 (4개)
-    { project: projects[0], subcontractor: subcontractors[0], contractNo: 'SC-001-01', workScope: '토공 및 절성토', contractAmount: 2_800_000_000, currentAmount: 2_800_000_000, contractDate: new Date('2025-02-01') },
-    { project: projects[0], subcontractor: subcontractors[1], contractNo: 'SC-001-02', workScope: '교량 구조물 공사', contractAmount: 4_200_000_000, currentAmount: 4_200_000_000, contractDate: new Date('2025-02-15') },
-    { project: projects[0], subcontractor: subcontractors[2], contractNo: 'SC-001-03', workScope: '아스팔트 포장공사', contractAmount: 1_500_000_000, currentAmount: 1_500_000_000, contractDate: new Date('2025-04-01') },
-    { project: projects[0], subcontractor: subcontractors[3], contractNo: 'SC-001-04', workScope: '도로조명 및 전기설비', contractAmount: 800_000_000, currentAmount: 800_000_000, contractDate: new Date('2025-04-15') },
+    { project: projects[0], subcontractor: subcontractors[0], workScope: '토공 및 절성토', contractAmount: 2_800_000_000, currentAmount: 2_800_000_000, contractDate: new Date('2025-02-01') },
+    { project: projects[0], subcontractor: subcontractors[1], workScope: '교량 구조물 공사', contractAmount: 4_200_000_000, currentAmount: 4_200_000_000, contractDate: new Date('2025-02-15') },
+    { project: projects[0], subcontractor: subcontractors[2], workScope: '아스팔트 포장공사', contractAmount: 1_500_000_000, currentAmount: 1_500_000_000, contractDate: new Date('2025-04-01') },
+    { project: projects[0], subcontractor: subcontractors[3], workScope: '도로조명 및 전기설비', contractAmount: 800_000_000, currentAmount: 800_000_000, contractDate: new Date('2025-04-15') },
     // P2025-002 서해안 교량 (3개)
-    { project: projects[1], subcontractor: subcontractors[1], contractNo: 'SC-002-01', workScope: '교량 내진보강 구조공사', contractAmount: 2_100_000_000, currentAmount: 2_100_000_000, contractDate: new Date('2025-04-01') },
-    { project: projects[1], subcontractor: subcontractors[6], contractNo: 'SC-002-02', workScope: '교량 상판 교체', contractAmount: 1_800_000_000, currentAmount: 1_800_000_000, contractDate: new Date('2025-04-15') },
-    { project: projects[1], subcontractor: subcontractors[7], contractNo: 'SC-002-03', workScope: '방수 및 도장공사', contractAmount: 450_000_000, currentAmount: 450_000_000, contractDate: new Date('2025-05-01') },
+    { project: projects[1], subcontractor: subcontractors[1], workScope: '교량 내진보강 구조공사', contractAmount: 2_100_000_000, currentAmount: 2_100_000_000, contractDate: new Date('2025-04-01') },
+    { project: projects[1], subcontractor: subcontractors[6], workScope: '교량 상판 교체', contractAmount: 1_800_000_000, currentAmount: 1_800_000_000, contractDate: new Date('2025-04-15') },
+    { project: projects[1], subcontractor: subcontractors[7], workScope: '방수 및 도장공사', contractAmount: 450_000_000, currentAmount: 450_000_000, contractDate: new Date('2025-05-01') },
     // P2024-003 은평 도시재생 (5개)
-    { project: projects[2], subcontractor: subcontractors[0], contractNo: 'SC-003-01', workScope: '기초 토공 및 흙막이', contractAmount: 1_200_000_000, currentAmount: 1_200_000_000, contractDate: new Date('2024-08-01') },
-    { project: projects[2], subcontractor: subcontractors[5], contractNo: 'SC-003-02', workScope: 'RC 골조 공사', contractAmount: 2_500_000_000, currentAmount: 2_500_000_000, contractDate: new Date('2024-08-15') },
-    { project: projects[2], subcontractor: subcontractors[6], contractNo: 'SC-003-03', workScope: '공원 조경 및 녹지 조성', contractAmount: 650_000_000, currentAmount: 650_000_000, contractDate: new Date('2024-10-01') },
-    { project: projects[2], subcontractor: subcontractors[3], contractNo: 'SC-003-04', workScope: '가로등 및 전기설비', contractAmount: 320_000_000, currentAmount: 320_000_000, contractDate: new Date('2024-10-01') },
-    { project: projects[2], subcontractor: subcontractors[8], contractNo: 'SC-003-05', workScope: 'CCTV 및 통신 인프라', contractAmount: 280_000_000, currentAmount: 280_000_000, contractDate: new Date('2024-11-01') },
+    { project: projects[2], subcontractor: subcontractors[0], workScope: '기초 토공 및 흙막이', contractAmount: 1_200_000_000, currentAmount: 1_200_000_000, contractDate: new Date('2024-08-01') },
+    { project: projects[2], subcontractor: subcontractors[5], workScope: 'RC 골조 공사', contractAmount: 2_500_000_000, currentAmount: 2_500_000_000, contractDate: new Date('2024-08-15') },
+    { project: projects[2], subcontractor: subcontractors[6], workScope: '공원 조경 및 녹지 조성', contractAmount: 650_000_000, currentAmount: 650_000_000, contractDate: new Date('2024-10-01') },
+    { project: projects[2], subcontractor: subcontractors[3], workScope: '가로등 및 전기설비', contractAmount: 320_000_000, currentAmount: 320_000_000, contractDate: new Date('2024-10-01') },
+    { project: projects[2], subcontractor: subcontractors[8], workScope: 'CCTV 및 통신 인프라', contractAmount: 280_000_000, currentAmount: 280_000_000, contractDate: new Date('2024-11-01') },
     // P2024-004 상수도 관로 완료 (4개)
-    { project: projects[3], subcontractor: subcontractors[0], contractNo: 'SC-004-01', workScope: '관로 굴착 및 되메우기', contractAmount: 900_000_000, currentAmount: 900_000_000, contractDate: new Date('2024-05-01'), status: SubcontractStatus.COMPLETED },
-    { project: projects[3], subcontractor: subcontractors[9], contractNo: 'SC-004-02', workScope: '환경영향 저감 및 오탁수 처리', contractAmount: 250_000_000, currentAmount: 250_000_000, contractDate: new Date('2024-05-01'), status: SubcontractStatus.COMPLETED },
-    { project: projects[3], subcontractor: subcontractors[4], contractNo: 'SC-004-03', workScope: '펌프장 기계설비 공사', contractAmount: 480_000_000, currentAmount: 480_000_000, contractDate: new Date('2024-06-01'), status: SubcontractStatus.COMPLETED },
-    { project: projects[3], subcontractor: subcontractors[3], contractNo: 'SC-004-04', workScope: '계측 및 제어설비', contractAmount: 190_000_000, currentAmount: 190_000_000, contractDate: new Date('2024-06-01'), status: SubcontractStatus.COMPLETED },
+    { project: projects[3], subcontractor: subcontractors[0], workScope: '관로 굴착 및 되메우기', contractAmount: 900_000_000, currentAmount: 900_000_000, contractDate: new Date('2024-05-01'), status: SubcontractStatus.COMPLETED },
+    { project: projects[3], subcontractor: subcontractors[9], workScope: '환경영향 저감 및 오탁수 처리', contractAmount: 250_000_000, currentAmount: 250_000_000, contractDate: new Date('2024-05-01'), status: SubcontractStatus.COMPLETED },
+    { project: projects[3], subcontractor: subcontractors[4], workScope: '펌프장 기계설비 공사', contractAmount: 480_000_000, currentAmount: 480_000_000, contractDate: new Date('2024-06-01'), status: SubcontractStatus.COMPLETED },
+    { project: projects[3], subcontractor: subcontractors[3], workScope: '계측 및 제어설비', contractAmount: 190_000_000, currentAmount: 190_000_000, contractDate: new Date('2024-06-01'), status: SubcontractStatus.COMPLETED },
     // P2026-005 강남 지하차도 (4개)
-    { project: projects[4], subcontractor: subcontractors[0], contractNo: 'SC-005-01', workScope: '지하 굴착 및 흙막이 공사', contractAmount: 3_500_000_000, currentAmount: 3_500_000_000, contractDate: new Date('2026-03-01') },
-    { project: projects[4], subcontractor: subcontractors[1], contractNo: 'SC-005-02', workScope: '지하차도 구조물 공사', contractAmount: 5_200_000_000, currentAmount: 5_200_000_000, contractDate: new Date('2026-03-15') },
-    { project: projects[4], subcontractor: subcontractors[4], contractNo: 'SC-005-03', workScope: '환기 및 기계설비', contractAmount: 1_800_000_000, currentAmount: 1_800_000_000, contractDate: new Date('2026-04-01') },
-    { project: projects[4], subcontractor: subcontractors[8], contractNo: 'SC-005-04', workScope: 'ITS 및 도로전광표지', contractAmount: 750_000_000, currentAmount: 750_000_000, contractDate: new Date('2026-04-01') },
+    { project: projects[4], subcontractor: subcontractors[0], workScope: '지하 굴착 및 흙막이 공사', contractAmount: 3_500_000_000, currentAmount: 3_500_000_000, contractDate: new Date('2026-03-01') },
+    { project: projects[4], subcontractor: subcontractors[1], workScope: '지하차도 구조물 공사', contractAmount: 5_200_000_000, currentAmount: 5_200_000_000, contractDate: new Date('2026-03-15') },
+    { project: projects[4], subcontractor: subcontractors[4], workScope: '환기 및 기계설비', contractAmount: 1_800_000_000, currentAmount: 1_800_000_000, contractDate: new Date('2026-04-01') },
+    { project: projects[4], subcontractor: subcontractors[8], workScope: 'ITS 및 도로전광표지', contractAmount: 750_000_000, currentAmount: 750_000_000, contractDate: new Date('2026-04-01') },
   ];
   const subcontracts: Subcontract[] = [];
   for (const s of subcontractsData) {
-    let existing = await subcontractRepo.findOneBy({ contractNo: s.contractNo });
+    let existing = await subcontractRepo.findOneBy({ projectId: s.project.id, subcontractorId: s.subcontractor.id });
     if (!existing) {
       existing = subcontractRepo.create({
         ...s,

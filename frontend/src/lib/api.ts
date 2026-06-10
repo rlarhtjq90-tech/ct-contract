@@ -97,7 +97,7 @@ export const subcontracts = {
   getOne: (id: number) => fetchApi<any>(`/subcontracts/${id}`),
   create: (data: any) =>
     fetchApi<any>("/subcontracts", { method: "POST", body: JSON.stringify(data) }),
-  update: (id: number, data: { contractNo?: string; workScope?: string; contractDate?: string; startDate?: string; endDate?: string }) =>
+  update: (id: number, data: { workScope?: string; contractDate?: string; startDate?: string; endDate?: string }) =>
     fetchApi<any>(`/subcontracts/${id}`, { method: "PUT", body: JSON.stringify(data) }),
   addChange: (id: number, data: { afterAmount: number; reason: string; effectiveDate?: string }) =>
     fetchApi<any>(`/subcontracts/${id}/changes`, { method: "POST", body: JSON.stringify(data) }),

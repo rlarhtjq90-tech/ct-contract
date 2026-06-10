@@ -66,7 +66,6 @@ export class ReportsService {
         return {
           id: sub.id,
           subcontractorName: sub.subcontractor?.name ?? '-',
-          contractNo: sub.contractNo ?? '-',
           status: sub.status,
           startDate: sub.startDate,
           endDate: sub.endDate,

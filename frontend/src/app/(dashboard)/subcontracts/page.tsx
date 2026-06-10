@@ -16,12 +16,12 @@ const STATUS_COLORS: Record<string, string> = {
 };
 
 const EMPTY_FORM = {
-  projectId: "", subcontractorId: "", contractNo: "",
+  projectId: "", subcontractorId: "",
   workScope: "", contractAmount: "", contractDate: "",
   startDate: "", endDate: "",
 };
 const EMPTY_CHANGE = { afterAmount: "", reason: "", effectiveDate: "" };
-const EMPTY_EDIT = { contractNo: "", workScope: "", contractDate: "", startDate: "", endDate: "" };
+const EMPTY_EDIT = { workScope: "", contractDate: "", startDate: "", endDate: "" };
 
 export default function SubcontractsPage() {
   const queryClient = useQueryClient();
@@ -67,7 +67,6 @@ export default function SubcontractsPage() {
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: number; data: typeof EMPTY_EDIT }) =>
       subcontracts.update(id, {
-        contractNo: data.contractNo || undefined,
         workScope: data.workScope || undefined,
         contractDate: data.contractDate || undefined,
         startDate: data.startDate || undefined,
@@ -112,11 +111,11 @@ export default function SubcontractsPage() {
 
   const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("ko-KR") : "-";
 
-  // 컬럼 수: [계약번호] + 하도급사 + 도급계약 + 계약금액 + 계약일 + 착공일 + 준공일 + 상태 + [액션]
-  const colCount = (isAdmin ? 1 : 0) + 7 + (canEdit ? 1 : 0);
+  // 컬럼 수: 하도급사 + 도급계약 + 계약금액 + 계약일 + 착공일 + 준공일 + 상태 + [액션]
+  const colCount = 7 + (canEdit ? 1 : 0);
 
   const filtered = subs.filter(
-    (s: any) => (s.subcontractor?.name || "").includes(search) || (s.project?.name || "").includes(search) || (s.contractNo || "").includes(search)
+    (s: any) => (s.subcontractor?.name || "").includes(search) || (s.project?.name || "").includes(search)
   );
 
   return (
@@ -140,7 +139,7 @@ export default function SubcontractsPage() {
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#AAA" }} />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="하도급사, 프로젝트, 계약번호 검색"
+              placeholder="하도급사, 프로젝트 검색"
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none"
               style={{ border: "1px solid #E6E6E6", width: "300px", color: "#333" }} />
           </div>
@@ -150,7 +149,6 @@ export default function SubcontractsPage() {
           <table className="ct-table">
             <thead>
               <tr>
-                {isAdmin && <th>계약번호</th>}
                 <th>하도급사</th>
                 <th>도급계약</th>
                 <th className="text-center">계약금액</th>
@@ -175,7 +173,6 @@ export default function SubcontractsPage() {
                 const pendingReq = pendingMap[`subcontract_${s.id}`];
                 return (
                   <tr key={s.id} style={pendingReq ? { background: "#FFF8F8" } : {}}>
-                    {isAdmin && <td className="font-mono text-xs" style={{ color: "#666" }}>{s.contractNo || "-"}</td>}
                     <td className="font-medium" style={{ color: "#1C90FB" }}>{s.subcontractor?.name}</td>
                     <td style={{ color: "#333" }}>{s.project?.name}</td>
                     <td className="text-center font-medium">
@@ -228,7 +225,6 @@ export default function SubcontractsPage() {
                             <button onClick={() => {
                               setEditTarget(s);
                               setEditForm({
-                                contractNo: s.contractNo || "",
                                 workScope: s.workScope || "",
                                 contractDate: s.contractDate ? new Date(s.contractDate).toISOString().slice(0, 10) : "",
                                 startDate: s.startDate ? new Date(s.startDate).toISOString().slice(0, 10) : "",
@@ -285,11 +281,6 @@ export default function SubcontractsPage() {
                   <option value="">하도급사 선택</option>
                   {subcontractorsList.map((s: any) => <option key={s.id} value={s.id}>{s.name} ({s.workType || ""})</option>)}
                 </select>
-              </div>
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약번호</label>
-                <input value={form.contractNo} onChange={(e) => setForm((f) => ({ ...f, contractNo: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none" style={{ border: "1px solid #E6E6E6", color: "#333" }} />
               </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약일</label>
@@ -351,15 +342,6 @@ export default function SubcontractsPage() {
               {editTarget.subcontractor?.name} · {editTarget.project?.name}
             </p>
             <div className="space-y-3">
-              <div>
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약번호</label>
-                <input
-                  value={editForm.contractNo}
-                  onChange={(e) => setEditForm((f) => ({ ...f, contractNo: e.target.value }))}
-                  className="w-full px-3 py-2 rounded text-sm outline-none"
-                  style={{ border: "1px solid #E6E6E6", color: "#333" }}
-                />
-              </div>
               <div>
                 <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>공사 범위</label>
                 <textarea

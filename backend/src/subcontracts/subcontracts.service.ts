@@ -12,7 +12,6 @@ import { IsNumber, IsString, IsOptional, IsDateString } from 'class-validator';
 export class CreateSubcontractDto {
   @IsNumber() projectId: number;
   @IsNumber() subcontractorId: number;
-  @IsOptional() @IsString() contractNo?: string;
   @IsOptional() @IsString() workScope?: string;
   @IsNumber() contractAmount: number;
   @IsOptional() @IsDateString() contractDate?: string;
@@ -21,7 +20,6 @@ export class CreateSubcontractDto {
 }
 
 export class UpdateSubcontractDto {
-  @IsOptional() @IsString() contractNo?: string;
   @IsOptional() @IsString() workScope?: string;
   @IsOptional() @IsDateString() contractDate?: string;
   @IsOptional() @IsDateString() startDate?: string;
@@ -86,7 +84,6 @@ export class SubcontractsService {
 
   async update(id: number, dto: UpdateSubcontractDto) {
     const patch: any = {};
-    if (dto.contractNo !== undefined) patch.contractNo = dto.contractNo;
     if (dto.workScope  !== undefined) patch.workScope  = dto.workScope;
     if (dto.contractDate) patch.contractDate = new Date(dto.contractDate);
     if (dto.startDate)    patch.startDate    = new Date(dto.startDate);

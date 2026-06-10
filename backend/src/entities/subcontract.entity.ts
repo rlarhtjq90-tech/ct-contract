@@ -32,9 +32,6 @@ export class Subcontract {
   @JoinColumn({ name: 'subcontractor_id' })
   subcontractor: Subcontractor;
 
-  @Column({ name: 'contract_no', length: 40, nullable: true })
-  contractNo: string;
-
   @Column({ name: 'work_scope', type: 'text', nullable: true })
   workScope: string;
 

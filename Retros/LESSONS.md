@@ -32,6 +32,14 @@ DTO 클래스의 **모든** 필드에 `@IsString()`, `@IsNumber()` 등 class-val
 `nest start --watch`가 실행 중이어도 포트에 실제로 바인딩된 PID가 새 dist를 사용하는지 보장되지 않는다.
 파일 수정 후 `Get-NetTCPConnection -LocalPort 4000` → PID 확인 → `Stop-Process` 후 재시작 패턴이 확실함.
 
+## DB 필드 관리
+
+### 컬럼 제거 시 grep으로 8곳 범위 파악 후 일괄 수정 #coding #nestjs
+DB 컬럼 하나를 제거할 때 entity/DTO/service/contract-changes/reports/snapshots/seed/UI 최소 8군데를 수정해야 한다. `grep -r "fieldName" --include="*.ts" --include="*.tsx"` 로 범위를 먼저 파악하고, 백엔드·프론트엔드 전체를 한 번에 수정해야 타입 에러와 런타임 불일치를 방지할 수 있다.
+
+### seed dedup 키는 제거 가능한 코드 컬럼 대신 비즈니스 유니크 조합 사용 #coding #nestjs
+contractNo·projectCode처럼 삭제될 수 있는 코드 컬럼을 seed의 중복 검사 키로 쓰면, 해당 필드 제거 시 seed도 함께 수정해야 하는 의존성이 생긴다. 처음부터 실제 비즈니스 유니크 조합(projectId+subcontractorId, name 등)을 dedup 키로 설정할 것.
+
 ## API 설계
 
 ### service/controller/client 3곳 동시 업데이트 #coding #api
