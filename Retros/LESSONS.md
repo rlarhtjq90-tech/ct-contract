@@ -15,6 +15,9 @@
 
 ## Deployment / 서버리스
 
+### Vercel CLI는 비ASCII 사용자명 환경에서 로그인 실패 #coding #deployment
+`vercel login`이 시스템 사용자명을 HTTP Authorization 헤더에 포함하는데, 한글 등 비ASCII 문자가 있으면 "is not a legal HTTP header value" 오류가 발생한다 (v52.2.1 버그). 우회 방법: Vercel 대시보드(vercel.com/account/tokens)에서 토큰 발급 후 `vercel --prod --token <token>` 플래그로 배포.
+
 ### NestJS 서버리스 콜드 스타트는 health 엔드포인트 + UptimeRobot으로 방지 #coding #deployment
 NestJS는 DI 컨테이너 초기화 + DB 연결로 콜드 스타트가 2~5초 걸린다. `/api/health`에서 `SELECT 1` 쿼리까지 실행하는 엔드포인트를 만들고, UptimeRobot(무료) 5분 인터벌로 ping하면 비용 없이 서버·DB를 항상 워밍업 상태로 유지할 수 있다.
 
@@ -53,7 +56,12 @@ NestJS에서 서비스 메서드 시그니처를 먼저 고정하면 새 필드(
 등록 버튼과 변경 버튼 중 하나만 권한 체크를 적용하면 viewer가 다른 경로로 쓰기 작업을 할 수 있다.
 컴포넌트를 추가/복사할 때마다 canEdit 조건이 포함됐는지 확인할 것.
 
-## Browser Automation
+## CSS / 레이아웃
+
+### 중첩 overflow 컨테이너는 sticky를 깨뜨린다 #coding #css
+`overflow-x-auto` 내부에 `overflow-auto`가 중첩되면 `position: sticky`가 올바른 스크롤 컨테이너를 찾지 못한다. 테이블 헤더(thead) sticky를 구현하려면 단일 `overflow-auto` 컨테이너로 통합하고, flex 레이아웃에서 `min-h-0`을 부모에 설정해야 내부 스크롤이 올바르게 동작한다.
+
+## Deployment / 서버리스
 
 ### window.confirm()이 Chrome 익스텐션 CDP를 블로킹함 #coding #browser-automation
 브라우저 자동화 도중 `window.confirm()` 다이얼로그가 열리면 모든 CDP 이벤트가 차단되어 이후 도구 호출이 응답하지 않는다. 자동화 시작 전 `window.confirm = () => true`를 JavaScript로 주입해서 미리 우회해야 함.

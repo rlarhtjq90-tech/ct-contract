@@ -19,6 +19,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
 export default function BillingsPage() {
   const queryClient = useQueryClient();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
+  const [vendorSearch, setVendorSearch] = useState("");
   const [edits, setEdits] = useState<Record<number, { actualAmount: number }>>({});
   const [editingRows, setEditingRows] = useState<Set<number>>(new Set());
   const [confirming, setConfirming] = useState<Set<number>>(new Set());
@@ -62,8 +63,14 @@ export default function BillingsPage() {
   const anomalyCount = billingList.filter((b: any) => b.isAnomaly).length;
   const approvedCount = billingList.filter((b: any) => b.status === "approved").length;
 
+  const filtered = billingList.filter((b: any) =>
+    b.subcontract?.subcontractor?.name
+      ?.toLowerCase()
+      .includes(vendorSearch.toLowerCase())
+  );
+
   return (
-    <div>
+    <div className="flex flex-col h-full">
       <PageHeader
         title="기성 입력 / 내부 검토"
         subtitle={`${month} 기준`}
@@ -82,45 +89,61 @@ export default function BillingsPage() {
         }
       />
 
-      <div className="p-6 space-y-4">
-        {/* 월 선택 + 요약 */}
-        <div className="flex items-center gap-4 flex-wrap">
-          <div className="flex items-center gap-2">
-            <label className="text-sm font-medium" style={{ color: "#666" }}>기성 월</label>
-            <input
-              type="month"
-              value={month}
-              onChange={(e) => setMonth(e.target.value)}
-              className="px-3 py-1.5 rounded-lg text-sm outline-none"
-              style={{ border: "1px solid #E6E6E6", color: "#333" }}
-            />
-          </div>
-
-          <div className="flex items-center gap-3 ml-auto">
-            {anomalyCount > 0 && (
-              <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-                style={{ background: "#FFF0F0", border: "1px solid #FFD6D7" }}>
-                <AlertTriangle size={13} style={{ color: "#FC5356" }} />
-                <span className="text-xs font-medium" style={{ color: "#FC5356" }}>
-                  이상치 {anomalyCount}건
-                </span>
-              </div>
-            )}
-            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
-              style={{ background: "#E8F9F2", border: "1px solid #B8EFDA" }}>
-              <CheckCircle size={13} style={{ color: "#1DC078" }} />
-              <span className="text-xs font-medium" style={{ color: "#1DC078" }}>
-                확정완료 {approvedCount}/{billingList.length}건
-              </span>
-            </div>
-          </div>
+      {/* 고정 필터 바 */}
+      <div
+        className="flex items-center gap-4 flex-wrap px-6 py-3"
+        style={{ background: "#F6F8FA", borderBottom: "1px solid #E6E6E6", flexShrink: 0 }}
+      >
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium" style={{ color: "#666" }}>기성 월</label>
+          <input
+            type="month"
+            value={month}
+            onChange={(e) => setMonth(e.target.value)}
+            className="px-3 py-1.5 rounded-lg text-sm outline-none"
+            style={{ border: "1px solid #E6E6E6", color: "#333" }}
+          />
         </div>
 
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium" style={{ color: "#666" }}>업체 검색</label>
+          <input
+            type="text"
+            placeholder="하도급사명 입력..."
+            value={vendorSearch}
+            onChange={(e) => setVendorSearch(e.target.value)}
+            className="px-3 py-1.5 rounded-lg text-sm outline-none"
+            style={{ border: "1px solid #E6E6E6", color: "#333", minWidth: 160 }}
+          />
+        </div>
+
+        <div className="flex items-center gap-3 ml-auto">
+          {anomalyCount > 0 && (
+            <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
+              style={{ background: "#FFF0F0", border: "1px solid #FFD6D7" }}>
+              <AlertTriangle size={13} style={{ color: "#FC5356" }} />
+              <span className="text-xs font-medium" style={{ color: "#FC5356" }}>
+                이상치 {anomalyCount}건
+              </span>
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg"
+            style={{ background: "#E8F9F2", border: "1px solid #B8EFDA" }}>
+            <CheckCircle size={13} style={{ color: "#1DC078" }} />
+            <span className="text-xs font-medium" style={{ color: "#1DC078" }}>
+              확정완료 {approvedCount}/{billingList.length}건
+            </span>
+          </div>
+        </div>
+      </div>
+
+      {/* 스크롤 가능한 테이블 영역 */}
+      <div className="flex-1 min-h-0 px-6 pb-6 pt-4 flex flex-col">
         {/* 기성 그리드 */}
-        <div className="ct-card overflow-hidden">
-          <div className="overflow-x-auto">
+        <div className="ct-card overflow-hidden flex-1 min-h-0 flex flex-col">
+          <div className="overflow-auto flex-1">
             <table className="ct-table" style={{ minWidth: "1000px" }}>
-              <thead>
+              <thead style={{ position: "sticky", top: 0, zIndex: 1, background: "#F7F8FA" }}>
                 <tr>
                   <th style={{ minWidth: "160px" }}>하도급사</th>
                   <th style={{ minWidth: "120px" }}>도급계약</th>
@@ -145,8 +168,16 @@ export default function BillingsPage() {
                       </div>
                     </td>
                   </tr>
+                ) : filtered.length === 0 ? (
+                  <tr>
+                    <td colSpan={9} className="text-center py-12">
+                      <div style={{ color: "#AAA", fontSize: 13 }}>
+                        "{vendorSearch}"에 해당하는 업체가 없습니다.
+                      </div>
+                    </td>
+                  </tr>
                 ) : (
-                  billingList.map((b: any) => {
+                  filtered.map((b: any) => {
                     const edit = edits[b.id] || {};
                     const isEdited = b.id in edits;
                     const isConfirmed = b.status === "approved";
@@ -273,3 +304,4 @@ export default function BillingsPage() {
     </div>
   );
 }
+
