@@ -16,7 +16,7 @@
 ## Deployment / 서버리스
 
 ### Vercel CLI는 비ASCII 사용자명 환경에서 로그인 실패 #coding #deployment
-`vercel login`이 시스템 사용자명을 HTTP Authorization 헤더에 포함하는데, 한글 등 비ASCII 문자가 있으면 "is not a legal HTTP header value" 오류가 발생한다 (v52.2.1 버그). 우회 방법: Vercel 대시보드(vercel.com/account/tokens)에서 토큰 발급 후 `vercel --prod --token <token>` 플래그로 배포.
+`vercel login`이 시스템 사용자명을 HTTP Authorization 헤더에 포함하는데, 한글 등 비ASCII 문자가 있으면 "is not a legal HTTP header value" 오류가 발생한다 (v52.2.1 버그). 우회 방법 2가지: ① Vercel 대시보드(vercel.com/account/tokens)에서 토큰 발급 후 `vercel --prod --token <token>` 플래그로 배포; ② Git push → Vercel Git 연동 자동 배포 확인(더 간단, 브라우저 대시보드에서 Ready 상태 확인).
 
 ### NestJS 서버리스 콜드 스타트는 health 엔드포인트 + UptimeRobot으로 방지 #coding #deployment
 NestJS는 DI 컨테이너 초기화 + DB 연결로 콜드 스타트가 2~5초 걸린다. `/api/health`에서 `SELECT 1` 쿼리까지 실행하는 엔드포인트를 만들고, UptimeRobot(무료) 5분 인터벌로 ping하면 비용 없이 서버·DB를 항상 워밍업 상태로 유지할 수 있다.

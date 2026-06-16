@@ -2,7 +2,7 @@
 
 ## 현재 상태
 <!-- /wrap이 매 세션 이 섹션을 업데이트합니다 -->
-- **상태:** 로컬 변경 완료 — Vercel 배포 미완료 (CLI 인증 버그)
+- **상태:** 프로덕션 배포 완료 (ct-contract.vercel.app — Ready)
 - **주요 기능:**
   - 로그인 (JWT, admin/pm/viewer — 힌트 버튼 제거됨)
   - 사이드바 아코디언: 도급계약(발주처·기성현황) / 하도급계약(하도급사·기성현황)
@@ -14,10 +14,14 @@
   - Vercel 배포: 프론트(ct-contract.vercel.app) + 백엔드(ct-contract-backend.vercel.app) + Neon PostgreSQL
   - `/api/health` 엔드포인트 + UptimeRobot 5분 워밍업 (콜드 스타트 방지)
   - 불필요 필드 제거: 도급계약 `projectCode`, 하도급계약 `contractNo` 전체 삭제
-- **알려진 이슈:** Vercel CLI `vercel login` 오류 — 한글 사용자명이 HTTP 헤더에 포함되는 버그 (v52.2.1)
+- **알려진 이슈:** Vercel CLI `vercel login` 오류 — 한글 사용자명이 HTTP 헤더에 포함되는 버그 (v52.2.1) → Chrome 브라우저로 우회 배포
 
 ## 세션 로그
 <!-- ⚠️ APPEND ONLY — 아래 항목을 절대 삭제/수정하지 마세요. 새 항목은 이 줄 바로 아래에 추가합니다. -->
+
+### 2026-06-16
+- main 브랜치 git push 완료
+- Vercel CLI 한글 사용자명 버그로 CLI 배포 불가 → Chrome 자동화로 대시보드 접근, Git 연동 자동 배포 확인 (Status: Ready)
 
 ### 2026-06-11
 - 하도급 기성현황(`/billings`): 업체검색 필드 추가, 기성월+검색 상단 고정 필터 바, 테이블 헤더 sticky, 하도급 항목 독립 스크롤 (단일 overflow-auto 컨테이너로 재구성)
