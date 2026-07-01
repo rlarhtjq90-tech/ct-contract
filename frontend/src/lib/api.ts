@@ -160,3 +160,27 @@ export const contractChanges = {
 export const reports = {
   getOverview: () => fetchApi<any[]>("/reports/overview"),
 };
+
+// ===== Users (사용자 관리) =====
+export interface UserDto {
+  id: number;
+  email: string;
+  name: string;
+  role: 'admin' | 'pm' | 'viewer';
+  createdAt: string;
+}
+
+export const users = {
+  getAll: () => fetchApi<UserDto[]>("/users"),
+  create: (data: { email: string; name: string; password: string; role: string }) =>
+    fetchApi<UserDto>("/users", { method: "POST", body: JSON.stringify(data) }),
+  update: (id: number, data: { name?: string; role?: string }) =>
+    fetchApi<UserDto>(`/users/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  resetPassword: (id: number, newPassword: string) =>
+    fetchApi<{ success: boolean }>(`/users/${id}/password`, {
+      method: "PATCH",
+      body: JSON.stringify({ newPassword }),
+    }),
+  remove: (id: number) =>
+    fetchApi<{ success: boolean }>(`/users/${id}`, { method: "DELETE" }),
+};

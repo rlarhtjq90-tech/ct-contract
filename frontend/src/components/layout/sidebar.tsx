@@ -14,7 +14,9 @@ import {
   Archive,
   Bell,
   ChevronRight,
+  Users,
 } from "lucide-react";
+import { useIsAdmin } from "@/lib/auth";
 
 type SubItem = { href: string; icon: React.ElementType; label: string };
 type NavItem = {
@@ -23,32 +25,6 @@ type NavItem = {
   label: string;
   children?: SubItem[];
 };
-
-const navItems: NavItem[] = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
-  {
-    href: "/projects",
-    icon: FolderOpen,
-    label: "도급계약",
-    children: [
-      { href: "/clients", icon: Building2, label: "발주처" },
-      { href: "/project-billings", icon: BarChart3, label: "기성현황" },
-    ],
-  },
-  {
-    href: "/subcontracts",
-    icon: FileText,
-    label: "하도급계약",
-    children: [
-      { href: "/subcontractors", icon: Building2, label: "하도급사" },
-      { href: "/billings", icon: BarChart3, label: "기성현황" },
-    ],
-  },
-  { href: "/trends", icon: TrendingUp, label: "변동추이" },
-  { href: "/reports", icon: FileBarChart, label: "리포트" },
-  { href: "/snapshots", icon: Archive, label: "월별 마감" },
-  { href: "/notifications", icon: Bell, label: "알림" },
-];
 
 // 각 자식 경로가 어느 부모(href)에 속하는지 미리 맵핑
 const childParentMap: Record<string, string> = {
@@ -61,6 +37,34 @@ const childParentMap: Record<string, string> = {
 export function Sidebar() {
   const pathname = usePathname();
   const [openParent, setOpenParent] = useState<string | null>(null);
+  const isAdmin = useIsAdmin();
+
+  const navItems: NavItem[] = [
+    { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
+    {
+      href: "/projects",
+      icon: FolderOpen,
+      label: "도급계약",
+      children: [
+        { href: "/clients", icon: Building2, label: "발주처" },
+        { href: "/project-billings", icon: BarChart3, label: "기성현황" },
+      ],
+    },
+    {
+      href: "/subcontracts",
+      icon: FileText,
+      label: "하도급계약",
+      children: [
+        { href: "/subcontractors", icon: Building2, label: "하도급사" },
+        { href: "/billings", icon: BarChart3, label: "기성현황" },
+      ],
+    },
+    { href: "/trends", icon: TrendingUp, label: "변동추이" },
+    { href: "/reports", icon: FileBarChart, label: "리포트" },
+    { href: "/snapshots", icon: Archive, label: "월별 마감" },
+    { href: "/notifications", icon: Bell, label: "알림" },
+    ...(isAdmin ? [{ href: "/users", icon: Users, label: "사용자 관리" }] : []),
+  ];
 
   useEffect(() => {
     // 현재 경로가 부모 경로 자체인지 확인
