@@ -14,10 +14,16 @@
   - Vercel 배포: 프론트(ct-contract.vercel.app) + 백엔드(ct-contract-backend.vercel.app) + Neon PostgreSQL
   - `/api/health` 엔드포인트 + UptimeRobot 5분 워밍업 (콜드 스타트 방지)
   - 불필요 필드 제거: 도급계약 `projectCode`, 하도급계약 `contractNo` 전체 삭제
-- **알려진 이슈:** Vercel CLI `vercel login` 오류 — 한글 사용자명이 HTTP 헤더에 포함되는 버그 (v52.2.1) → Chrome 브라우저로 우회 배포
+  - 사용자 관리 `/users` (admin 전용) — 등록·수정·비밀번호초기화·삭제, 자기계정 역할변경·삭제 금지, 마지막 admin 삭제 금지
+- **알려진 이슈:** Vercel CLI `vercel login` 오류 — 한글 사용자명이 HTTP 헤더에 포함되는 버그 (v52.2.1) → Chrome 브라우저로 우회 배포. 사용자 관리 기능은 로컬 실동작 테스트 미실시(코드 리뷰 기준 완결)
 
 ## 세션 로그
 <!-- ⚠️ APPEND ONLY — 아래 항목을 절대 삭제/수정하지 마세요. 새 항목은 이 줄 바로 아래에 추가합니다. -->
+
+### 2026-07-01
+- 사용자 관리(Users) 기능 신규 추가: 백엔드 `UsersController`(등록/수정/비번초기화/삭제, admin 전용 가드), DTO 3종, 프론트 `/users` 페이지, 사이드바 admin 전용 메뉴
+- 안전장치: 이메일 중복 체크, 자기 자신 역할변경·삭제 금지, 마지막 admin 계정 삭제 금지
+- 로컬 실동작 검증 없이 커밋 (사용자 판단으로 즉시 커밋 선택)
 
 ### 2026-06-16
 - main 브랜치 git push 완료

@@ -9,13 +9,6 @@ import { AlertTriangle, CheckCircle, Download } from "lucide-react";
 import { fmtNum } from "@/lib/format";
 import { exportSubBillings } from "@/lib/excel";
 
-const STATUS_MAP: Record<string, { label: string; cls: string }> = {
-  pending: { label: "미입력", cls: "ct-badge-gray" },
-  submitted: { label: "입력완료", cls: "ct-badge-blue" },
-  approved: { label: "확정완료", cls: "ct-badge-green" },
-  rejected: { label: "반려", cls: "ct-badge-red" },
-};
-
 export default function BillingsPage() {
   const queryClient = useQueryClient();
   const [month, setMonth] = useState(format(new Date(), "yyyy-MM"));
@@ -152,16 +145,15 @@ export default function BillingsPage() {
                   <th className="text-right" style={{ minWidth: "110px" }}>당월금액</th>
                   <th className="text-right" style={{ minWidth: "90px" }}>누적금액</th>
                   <th style={{ minWidth: "100px" }}>기성률</th>
-                  <th style={{ minWidth: "80px" }}>상태</th>
                   <th style={{ minWidth: "70px" }}>비고</th>
                 </tr>
               </thead>
               <tbody>
                 {isLoading ? (
-                  <tr><td colSpan={9} className="text-center py-10" style={{ color: "#AAA" }}>불러오는 중...</td></tr>
+                  <tr><td colSpan={8} className="text-center py-10" style={{ color: "#AAA" }}>불러오는 중...</td></tr>
                 ) : billingList.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12">
+                    <td colSpan={8} className="text-center py-12">
                       <div style={{ color: "#AAA", fontSize: 13 }}>
                         {month} 기성 데이터가 없습니다.
                         <br />하도급계약을 먼저 등록하세요.
@@ -170,7 +162,7 @@ export default function BillingsPage() {
                   </tr>
                 ) : filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={9} className="text-center py-12">
+                    <td colSpan={8} className="text-center py-12">
                       <div style={{ color: "#AAA", fontSize: 13 }}>
                         "{vendorSearch}"에 해당하는 업체가 없습니다.
                       </div>
@@ -266,11 +258,6 @@ export default function BillingsPage() {
                               {liveRate.toFixed(1)}%
                             </span>
                           </div>
-                        </td>
-                        <td>
-                          <span className={`ct-badge ${STATUS_MAP[b.status]?.cls || "ct-badge-gray"}`}>
-                            {STATUS_MAP[b.status]?.label || b.status}
-                          </span>
                         </td>
                         <td>
                           {isEditable ? (
