@@ -8,13 +8,6 @@ import { Plus, Search, FileText, GitBranch, Trash2, Check, X, Pencil } from "luc
 import { fmtNum, fmtMoney } from "@/lib/format";
 import { useIsAdmin, useCanEdit } from "@/lib/auth";
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "진행중", completed: "완료", suspended: "일시중단", cancelled: "취소",
-};
-const STATUS_COLORS: Record<string, string> = {
-  active: "ct-badge-blue", completed: "ct-badge-green", suspended: "ct-badge-orange", cancelled: "ct-badge-gray",
-};
-
 const EMPTY_FORM = {
   projectId: "", subcontractorId: "",
   workScope: "", contractAmount: "", contractDate: "",
@@ -111,8 +104,8 @@ export default function SubcontractsPage() {
 
   const fmtDate = (d: any) => d ? new Date(d).toLocaleDateString("ko-KR") : "-";
 
-  // 컬럼 수: 하도급사 + 도급계약 + 계약금액 + 계약일 + 착공일 + 준공일 + 상태 + [액션]
-  const colCount = 7 + (canEdit ? 1 : 0);
+  // 컬럼 수: 하도급사 + 도급계약 + 계약금액 + 계약일 + 착공일 + 준공일 + [액션]
+  const colCount = 6 + (canEdit ? 1 : 0);
 
   const filtered = subs.filter(
     (s: any) => (s.subcontractor?.name || "").includes(search) || (s.project?.name || "").includes(search)
@@ -155,7 +148,6 @@ export default function SubcontractsPage() {
                 <th style={{ whiteSpace: "nowrap" }}>계약일</th>
                 <th style={{ whiteSpace: "nowrap" }}>착공일</th>
                 <th style={{ whiteSpace: "nowrap" }}>준공일</th>
-                <th>상태</th>
                 {canEdit && <th className="text-center">비고</th>}
               </tr>
             </thead>
@@ -186,7 +178,6 @@ export default function SubcontractsPage() {
                     <td style={{ color: "#888", whiteSpace: "nowrap" }}>{fmtDate(s.contractDate)}</td>
                     <td style={{ color: "#888", whiteSpace: "nowrap" }}>{fmtDate(s.startDate)}</td>
                     <td style={{ color: "#888", whiteSpace: "nowrap" }}>{fmtDate(s.endDate)}</td>
-                    <td><span className={`ct-badge ${STATUS_COLORS[s.status] || "ct-badge-gray"}`}>{STATUS_LABELS[s.status] || s.status}</span></td>
                     {canEdit && (
                       <td className="text-center" style={{ verticalAlign: "middle" }}>
                         <div className="flex flex-col items-center gap-1.5">

@@ -8,13 +8,6 @@ import { Plus, Search, FolderOpen, GitBranch, Trash2, Check, X } from "lucide-re
 import { fmtMoney } from "@/lib/format";
 import { useIsAdmin, useCanEdit } from "@/lib/auth";
 
-const STATUS_LABELS: Record<string, string> = {
-  active: "진행중", completed: "완료", suspended: "일시중단", cancelled: "취소",
-};
-const STATUS_COLORS: Record<string, string> = {
-  active: "ct-badge-blue", completed: "ct-badge-green", suspended: "ct-badge-orange", cancelled: "ct-badge-gray",
-};
-
 const EMPTY_FORM = {
   clientId: "", name: "", contractAmount: "",
   contractDate: "", startDate: "", endDate: "", description: "",
@@ -88,8 +81,8 @@ export default function ProjectsPage() {
 
   const formatAmt = fmtMoney;
 
-  // 컬럼 수: 프로젝트명+발주처+계약금액+계약일+착공일+준공일+상태(7) + [액션]
-  const colCount = 7 + (canEdit ? 1 : 0);
+  // 컬럼 수: 계약명+발주처+계약금액+계약일+착공일+준공일(6) + [액션]
+  const colCount = 6 + (canEdit ? 1 : 0);
 
   const filtered = data.filter(
     (p: any) => p.name.includes(search) || (p.client?.name || "").includes(search)
@@ -115,7 +108,7 @@ export default function ProjectsPage() {
           <div className="relative">
             <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: "#AAA" }} />
             <input value={search} onChange={(e) => setSearch(e.target.value)}
-              placeholder="프로젝트명, 발주처 검색"
+              placeholder="계약명, 발주처 검색"
               className="pl-9 pr-4 py-2 rounded-lg text-sm outline-none"
               style={{ border: "1px solid #E6E6E6", width: "300px", color: "#333" }} />
           </div>
@@ -125,13 +118,12 @@ export default function ProjectsPage() {
           <table className="ct-table">
             <thead>
               <tr>
-                <th>프로젝트명</th>
+                <th>계약명</th>
                 <th>발주처</th>
                 <th className="text-center">계약금액</th>
                 <th>계약일</th>
                 <th>착공일</th>
                 <th>준공일</th>
-                <th>상태</th>
                 {canEdit && <th className="text-center">비고</th>}
               </tr>
             </thead>
@@ -162,7 +154,6 @@ export default function ProjectsPage() {
                     <td style={{ color: "#888" }}>{p.contractDate ? new Date(p.contractDate).toLocaleDateString("ko-KR") : "-"}</td>
                     <td style={{ color: "#888" }}>{p.startDate ? new Date(p.startDate).toLocaleDateString("ko-KR") : "-"}</td>
                     <td style={{ color: "#888" }}>{p.endDate ? new Date(p.endDate).toLocaleDateString("ko-KR") : "-"}</td>
-                    <td><span className={`ct-badge ${STATUS_COLORS[p.status] || "ct-badge-gray"}`}>{STATUS_LABELS[p.status]}</span></td>
                     {canEdit && (
                       <td className="text-center" style={{ verticalAlign: "middle" }}>
                         <div className="flex flex-col items-center gap-1.5">
@@ -239,7 +230,7 @@ export default function ProjectsPage() {
                 </select>
               </div>
               <div className="col-span-2">
-                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>프로젝트명*</label>
+                <label className="block text-xs font-medium mb-1" style={{ color: "#666" }}>계약명*</label>
                 <input value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
                   className="w-full px-3 py-2 rounded text-sm outline-none"
                   style={{ border: "1px solid #E6E6E6", color: "#333" }} />
