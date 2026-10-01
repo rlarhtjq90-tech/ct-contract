@@ -15,6 +15,7 @@ import { MonthlySnapshot } from './entities/monthly-snapshot.entity';
 import { Notification } from './entities/notification.entity';
 import { DeleteRequest } from './entities/delete-request.entity';
 import { ProjectBilling } from './entities/project-billing.entity';
+import { GroupwareDocument, GroupwareImportLine } from './entities/groupware-import.entity';
 
 import { HealthController } from './health/health.controller';
 import { AuthModule } from './auth/auth.module';
@@ -32,11 +33,13 @@ import { NotificationsModule } from './notifications/notifications.module';
 import { SnapshotsModule } from './snapshots/snapshots.module';
 import { ContractChangesModule } from './contract-changes/contract-changes.module';
 import { ReportsModule } from './reports/reports.module';
+import { GroupwareImportModule } from './groupware-import/groupware-import.module';
 
 const ENTITIES = [
   User, Client, Project, Subcontractor, Subcontract,
   MonthlyBilling, ContractChange, ProjectMetric,
   MonthlySnapshot, Notification, DeleteRequest, ProjectBilling,
+  GroupwareDocument, GroupwareImportLine,
 ];
 
 @Module({
@@ -88,6 +91,7 @@ const ENTITIES = [
     ProjectBillingsModule,
     ContractChangesModule,
     ReportsModule,
+    GroupwareImportModule,
   ],
 })
 export class AppModule {}

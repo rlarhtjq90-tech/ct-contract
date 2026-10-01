@@ -161,6 +161,25 @@ export const reports = {
   getOverview: () => fetchApi<any[]>("/reports/overview"),
 };
 
+// ===== Groupware Import (그룹웨어 외주비 자동연동) =====
+export const groupwareImport = {
+  getSummary: () =>
+    fetchApi<{ autoMatched: number; needsReview: number; applied: number; ignored: number }>(
+      "/groupware-import/summary"
+    ),
+  getReviewQueue: () => fetchApi<any[]>("/groupware-import/review-queue"),
+  apply: (lineId: number, data: { subcontractId: number; billingMonth: string }) =>
+    fetchApi<any>(`/groupware-import/review-queue/${lineId}/apply`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  ignore: (lineId: number, note?: string) =>
+    fetchApi<any>(`/groupware-import/review-queue/${lineId}/ignore`, {
+      method: "POST",
+      body: JSON.stringify({ note }),
+    }),
+};
+
 // ===== Users (사용자 관리) =====
 export interface UserDto {
   id: number;

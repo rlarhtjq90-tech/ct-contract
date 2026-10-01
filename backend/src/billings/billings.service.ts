@@ -66,49 +66,88 @@ export class BillingsService {
       });
       if (!billing) continue;
 
-      // 누적 기성액 계산
-      const prevResult = await this.repo
-        .createQueryBuilder('b')
-        .where('b.subcontract_id = :sid', { sid: billing.subcontractId })
-        .andWhere('b.billing_month < :month', { month: billing.billingMonth })
-        .andWhere('b.status = :status', { status: BillingStatus.APPROVED })
-        .select('SUM(b.actual_amount)', 'total')
-        .getRawOne();
-
-      const prevTotal = Number(prevResult?.total || 0);
       const newActual = update.actualAmount ?? Number(billing.actualAmount);
-      const cumulative = prevTotal + newActual;
-      const contractAmount = Number(billing.subcontract?.currentAmount || 0);
-      const progressRate = contractAmount > 0 ? (cumulative / contractAmount) * 100 : 0;
-
-      // 이상치 감지: 전월 대비 ±30%
-      let isAnomaly = false;
-      let anomalyReason = '';
-      const prevMonthBilling = await this.getPrevMonthBilling(billing.subcontractId, billing.billingMonth);
-      const prevActual = prevMonthBilling ? Number(prevMonthBilling.actualAmount) : 0;
-      if (prevActual > 0 && newActual > 0) {
-        const changeRate = Math.abs((newActual - prevActual) / prevActual);
-        if (changeRate > 0.3) {
-          isAnomaly = true;
-          anomalyReason = `전월 대비 ${(changeRate * 100).toFixed(0)}% 변동 (전월: ${prevActual.toLocaleString()}원)`;
-        }
-      }
+      const fields = await this.computeBillingFields(billing, newActual);
 
       await this.repo.update(update.id, {
         plannedAmount: update.plannedAmount ?? billing.plannedAmount,
         actualAmount: newActual,
-        cumulativeAmount: cumulative,
-        progressRate: Math.min(progressRate, 999.99),
-        isAnomaly,
-        anomalyReason,
         memo: update.memo ?? billing.memo,
-        status: BillingStatus.SUBMITTED,
+        ...fields,
       });
 
       const updated = await this.repo.findOne({ where: { id: update.id } });
       if (updated) results.push(updated);
     }
     return results;
+  }
+
+  /** (subcontractId, billingMonth) 행이 없으면 PENDING으로 생성 후 반환 */
+  private async ensureRow(subcontractId: number, billingMonth: string): Promise<MonthlyBilling> {
+    let billing = await this.repo.findOne({
+      where: { subcontractId, billingMonth },
+      relations: { subcontract: true },
+    });
+    if (!billing) {
+      const saved = await this.repo.save(
+        this.repo.create({ subcontractId, billingMonth, status: BillingStatus.PENDING }),
+      );
+      billing = await this.repo.findOne({ where: { id: saved.id }, relations: { subcontract: true } });
+    }
+    return billing!;
+  }
+
+  /** 누적기성액·기성률·이상치 여부를 계산 (bulkUpdate와 외부연동 반영이 공유) */
+  private async computeBillingFields(billing: MonthlyBilling, newActual: number) {
+    const prevResult = await this.repo
+      .createQueryBuilder('b')
+      .where('b.subcontract_id = :sid', { sid: billing.subcontractId })
+      .andWhere('b.billing_month < :month', { month: billing.billingMonth })
+      .andWhere('b.status = :status', { status: BillingStatus.APPROVED })
+      .select('SUM(b.actual_amount)', 'total')
+      .getRawOne();
+
+    const prevTotal = Number(prevResult?.total || 0);
+    const cumulative = prevTotal + newActual;
+    const contractAmount = Number(billing.subcontract?.currentAmount || 0);
+    const progressRate = contractAmount > 0 ? (cumulative / contractAmount) * 100 : 0;
+
+    let isAnomaly = false;
+    let anomalyReason = '';
+    const prevMonthBilling = await this.getPrevMonthBilling(billing.subcontractId, billing.billingMonth);
+    const prevActual = prevMonthBilling ? Number(prevMonthBilling.actualAmount) : 0;
+    if (prevActual > 0 && newActual > 0) {
+      const changeRate = Math.abs((newActual - prevActual) / prevActual);
+      if (changeRate > 0.3) {
+        isAnomaly = true;
+        anomalyReason = `전월 대비 ${(changeRate * 100).toFixed(0)}% 변동 (전월: ${prevActual.toLocaleString()}원)`;
+      }
+    }
+
+    return {
+      cumulativeAmount: cumulative,
+      progressRate: Math.min(progressRate, 999.99),
+      isAnomaly,
+      anomalyReason,
+    };
+  }
+
+  /**
+   * 외부(그룹웨어) 연동에서 호출: 해당 월 기성액에 금액을 더해 반영.
+   * 같은 월에 여러 건(예: 기성 + 기지급)이 들어오면 누적 합산됨.
+   */
+  async upsertFromExternal(subcontractId: number, billingMonth: string, amountToAdd: number) {
+    const billing = await this.ensureRow(subcontractId, billingMonth);
+    const newActual = Number(billing.actualAmount) + amountToAdd;
+    const fields = await this.computeBillingFields(billing, newActual);
+
+    await this.repo.update(billing.id, {
+      actualAmount: newActual,
+      status: BillingStatus.SUBMITTED,
+      ...fields,
+    });
+
+    return this.repo.findOne({ where: { id: billing.id } });
   }
 
   async approve(id: number, approvedBy: string) {

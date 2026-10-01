@@ -1,0 +1,16 @@
+{
+  "name": "groupware-sync-bot",
+  "version": "1.0.0",
+  "private": true,
+  "description": "portal.ctgroup.co.kr 전자결재(자금신청/현장 외주비) → ct-contract 자동 동기화 봇",
+  "main": "sync.js",
+  "scripts": {
+    "sync": "node sync.js",
+    "sync:dry": "node sync.js --dry-run --headed",
+    "postinstall": "playwright install chromium"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.5",
+    "playwright": "^1.47.0"
+  }
+}

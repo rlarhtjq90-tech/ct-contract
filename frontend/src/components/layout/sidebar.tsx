@@ -15,8 +15,9 @@ import {
   Bell,
   ChevronRight,
   Users,
+  RefreshCw,
 } from "lucide-react";
-import { useIsAdmin } from "@/lib/auth";
+import { useIsAdmin, useCanEdit } from "@/lib/auth";
 
 type SubItem = { href: string; icon: React.ElementType; label: string };
 type NavItem = {
@@ -38,6 +39,7 @@ export function Sidebar() {
   const pathname = usePathname();
   const [openParent, setOpenParent] = useState<string | null>(null);
   const isAdmin = useIsAdmin();
+  const canEdit = useCanEdit();
 
   const navItems: NavItem[] = [
     { href: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
@@ -63,6 +65,7 @@ export function Sidebar() {
     { href: "/reports", icon: FileBarChart, label: "리포트" },
     { href: "/snapshots", icon: Archive, label: "월별 마감" },
     { href: "/notifications", icon: Bell, label: "알림" },
+    ...(canEdit ? [{ href: "/groupware-import", icon: RefreshCw, label: "외주비 자동연동" }] : []),
     ...(isAdmin ? [{ href: "/users", icon: Users, label: "사용자 관리" }] : []),
   ];
 
