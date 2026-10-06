@@ -1,13 +1,47 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { billings } from "@/lib/api";
 import { PageHeader } from "@/components/layout/page-header";
 import { format } from "date-fns";
-import { AlertTriangle, CheckCircle, Download } from "lucide-react";
-import { fmtNum } from "@/lib/format";
+import {
+  AlertTriangle, CheckCircle, Download, FileText, Building2, TrendingUp,
+} from "lucide-react";
+import { fmtNum, fmtMoney, fmtRate } from "@/lib/format";
 import { exportSubBillings } from "@/lib/excel";
+
+/* ── KPI 카드 (메인 대시보드 패턴 재사용, 이 페이지 로컬 전용) ── */
+function KpiCard({
+  label, value, unit, sub, icon: Icon, color = "#1C90FB", dim = false,
+}: {
+  label: string; value: string | number; unit?: string; sub?: string;
+  icon: any; color?: string; dim?: boolean;
+}) {
+  const c = dim ? "#BBB" : color;
+  return (
+    <div className="ct-card p-4 flex flex-col gap-2" style={{ minWidth: 0 }}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs font-medium" style={{ color: "#888" }}>{label}</span>
+        <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ background: `${c}18` }}>
+          <Icon size={16} style={{ color: c }} />
+        </div>
+      </div>
+      <div className="flex items-baseline gap-1">
+        <span className="text-xl font-bold" style={{ color: "#222" }}>{value}</span>
+        {unit && <span className="text-sm" style={{ color: "#888" }}>{unit}</span>}
+      </div>
+      {sub && <div className="text-xs" style={{ color: "#AAA" }}>{sub}</div>}
+    </div>
+  );
+}
+
+const STATUS_META = [
+  { key: "active", label: "활성", color: "#1DC078" },
+  { key: "completed", label: "완료", color: "#1C90FB" },
+  { key: "suspended", label: "중단", color: "#F5A623" },
+  { key: "cancelled", label: "취소", color: "#AAA" },
+] as const;
 
 export default function BillingsPage() {
   const queryClient = useQueryClient();
